@@ -9,17 +9,17 @@ export interface TrafficStatusMapping {
 /**
  * Computes traffic status colors for all AITs based on Splunk data
  * Logic:
- * - If any entry has "is_TRAFFIC_FOLLOWING": "No", set to red
- * - If all entries have "is_TRAFFIC_FOLLOWING": "Yes", set to green  
+ * - If any entry has "iS_TRAFFIC_FOLLOWING": "No", set to red
+ * - If all entries have "iS_TRAFFIC_FOLLOWING": "Yes", set to green  
  * - If all entries are null or field is missing, set to grey
  */
 export function computeTrafficStatusColors(splunkData: SplunkDataItem[]): TrafficStatusMapping {
   const aitTrafficData: { [aitNum: string]: (boolean | null)[] } = {}
 
-  // Group data by aiT_NUM and collect is_TRAFFIC_FOLLOWING values
+  // Group data by aiT_NUM and collect iS_TRAFFIC_FOLLOWING values
   splunkData.forEach(item => {
     const aitNum = item.aiT_NUM
-    const trafficFollowing = item.is_TRAFFIC_FOLLOWING
+    const trafficFollowing = item.iS_TRAFFIC_FOLLOWING
 
     if (!aitTrafficData[aitNum]) {
       aitTrafficData[aitNum] = []

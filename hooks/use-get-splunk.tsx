@@ -4,16 +4,16 @@ import splunkApiData from '@/lib/splunk-api-data.json';
 export interface SplunkDataItem {
   aiT_NUM: string;
   aiT_NAME: string;
-  FLOW_DIRECTION: string;
-  flow_AIT_NUM: string;
-  flow_AIT_NAME: string;
-  is_TRAFFIC_FOLLOWING: "Yes" | "No" | null;
-  is_TRAFFIC_ON_TREND: string;
-  average_TRANSACTION_COUNT: string;
-  current_TRANSACTION_COUNT: string;
-  historic_STD: string;
-  historic_MEAN: string;
-  current_STD_VARIATION: string;
+  floW_DIRECTION: string;
+  floW_AIT_NUM: string;
+  floW_AIT_NAME: string;
+  iS_TRAFFIC_FOLLOWING: "Yes" | "No" | null;
+  iS_TRAFFIC_ON_TREND: string;
+  averagE_TRANSACTION_COUNT: string;
+  currenT_TRANSACTION_COUNT: string;
+  historiC_STD: string;
+  historiC_MEAN: string;
+  currenT_STD_VARIATION: string;
 }
 
 export function useGetSplunk() {

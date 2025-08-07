@@ -64,7 +64,7 @@ export function computeTrendColors(splunkData: SplunkDataItem[]): TrendColorMapp
   // Group data by aiT_NUM and classify each STD variation
   splunkData.forEach(item => {
     const aitNum = item.aiT_NUM
-    const stdVariation = parseFloat(item.current_STD_VARIATION)
+    const stdVariation = parseFloat(item.currenT_STD_VARIATION)
 
     if (!aitClassifications[aitNum]) {
       aitClassifications[aitNum] = []
