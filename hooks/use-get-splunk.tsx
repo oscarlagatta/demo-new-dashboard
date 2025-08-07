@@ -7,7 +7,7 @@ export interface SplunkDataItem {
   floW_DIRECTION: string;
   floW_AIT_NUM: string;
   floW_AIT_NAME: string;
-  iS_TRAFFIC_FOLLOWING: "Yes" | "No" | null;
+  iS_TRAFFIC_FLOWING: "Yes" | "No" | null;
   iS_TRAFFIC_ON_TREND: string;
   averagE_TRANSACTION_COUNT: string;
   currenT_TRANSACTION_COUNT: string;

@@ -9,17 +9,17 @@ export interface TrafficStatusMapping {
 /**
  * Computes traffic status colors for all AITs based on Splunk data
  * Logic:
- * - If any entry has "iS_TRAFFIC_FOLLOWING": "No", set to red
- * - If all entries have "iS_TRAFFIC_FOLLOWING": "Yes", set to green  
+ * - If any entry has "iS_TRAFFIC_FLOWING": "No", set to red
+ * - If all entries have "iS_TRAFFIC_FLOWING": "Yes", set to green  
  * - If all entries are null or field is missing, set to grey
  */
 export function computeTrafficStatusColors(splunkData: SplunkDataItem[]): TrafficStatusMapping {
   const aitTrafficData: { [aitNum: string]: (boolean | null)[] } = {}
 
-  // Group data by aiT_NUM and collect iS_TRAFFIC_FOLLOWING values
+  // Group data by aiT_NUM and collect iS_TRAFFIC_FLOWING values
   splunkData.forEach(item => {
     const aitNum = item.aiT_NUM
-    const trafficFollowing = item.iS_TRAFFIC_FOLLOWING
+    const trafficFlowing = item.iS_TRAFFIC_FLOWING
 
     if (!aitTrafficData[aitNum]) {
       aitTrafficData[aitNum] = []
@@ -27,12 +27,12 @@ export function computeTrafficStatusColors(splunkData: SplunkDataItem[]): Traffi
 
     // Convert string values to boolean/null
     let trafficValue: boolean | null = null
-    if (trafficFollowing === "Yes") {
+    if (trafficFlowing === "Yes") {
       trafficValue = true
-    } else if (trafficFollowing === "No") {
+    } else if (trafficFlowing === "No") {
       trafficValue = false
     }
-    // If trafficFollowing is null or any other value, trafficValue remains null
+    // If trafficFlowing is null or any other value, trafficValue remains null
 
     aitTrafficData[aitNum].push(trafficValue)
   })
