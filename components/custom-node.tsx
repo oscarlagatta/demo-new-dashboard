@@ -1,11 +1,12 @@
 import { memo } from "react"
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { useGetSplunk } from "@/hooks/use-get-splunk"
 import { computeTrendColors, getTrendColorClass, type TrendColor } from "@/lib/trend-color-utils"
 import { computeTrafficStatusColors, getTrafficStatusColorClass, type TrafficStatusColor } from "@/lib/traffic-status-utils"
 import { useMemo } from "react"
+import { LoadingButton } from "./loading-button"
+import { CardLoadingSkeleton } from "./loading-skeleton"
 
 type CustomNodeData = {
   title: string
@@ -20,7 +21,7 @@ type CustomNodeData = {
 type CustomNodeType = Node<CustomNodeData>
 
 const CustomNode = ({ data, id }: NodeProps<CustomNodeType>) => {
-  const { data: splunkData } = useGetSplunk()
+  const { data: splunkData, isLoading, isError, isFetching } = useGetSplunk()
   
   // Extract AIT number from the node data subtext (format: "AIT {number}")
   const aitNum = useMemo(() => {
@@ -54,24 +55,38 @@ const CustomNode = ({ data, id }: NodeProps<CustomNodeType>) => {
   const trafficStatusColorClass = getTrafficStatusColorClass(trafficStatusColor)
 
   const handleClick = () => {
-    if (data.onClick && id) {
+    if (data.onClick && id && !isLoading) {
       data.onClick(id)
     }
   }
 
-  // Determine styling based on selection state
+  // Determine styling based on selection state and loading
   const getCardClassName = () => {
-    let baseClass = "border-2 border-[rgb(10,49,97)] bg-gray-100 shadow-md cursor-pointer transition-all duration-200"
+    let baseClass = "border-2 border-[rgb(10,49,97)] shadow-md cursor-pointer transition-all duration-200"
     
-    if (data.isSelected) {
+    // Loading state styling
+    if (isLoading || isFetching) {
+      baseClass += " bg-gray-50 animate-pulse"
+    } else if (isError) {
+      baseClass += " bg-red-50 border-red-200"
+    } else {
+      baseClass += " bg-gray-100"
+    }
+    
+    if (data.isSelected && !isLoading) {
       baseClass += " ring-2 ring-blue-700 shadow-lg scale-105"
-    } else if (data.isConnected) {
+    } else if (data.isConnected && !isLoading) {
       baseClass += " ring-2 ring-blue-300 shadow-lg"
     } else if (data.isDimmed) {
       baseClass += " opacity-40"
     }
     
     return baseClass
+  }
+
+  // Show loading skeleton during initial load
+  if (isLoading) {
+    return <CardLoadingSkeleton className="w-full" />
   }
 
   return (
@@ -84,20 +99,41 @@ const CustomNode = ({ data, id }: NodeProps<CustomNodeType>) => {
       <Handle type="source" position={Position.Top} className="!bg-gray-400 w-2 h-2" />
       <Handle type="source" position={Position.Bottom} className="!bg-gray-400 w-2 h-2" />
       <CardHeader className="p-2">
-        <CardTitle className="text-xs font-bold whitespace-nowrap text-center">{data.title}</CardTitle>
+        <CardTitle className="text-xs font-bold whitespace-nowrap text-center">
+          {data.title}
+        </CardTitle>
         <p className="text-[10px] text-muted-foreground text-center">{data.subtext}</p>
       </CardHeader>
       <CardContent className="p-2 pt-0">
         <div className="flex space-x-1">
-          <Button variant="outline" className={`h-6 px-2 text-[10px] shadow-sm text-white ${trafficStatusColorClass}`}>
+          <LoadingButton
+            isLoading={isFetching}
+            loadingText="..."
+            variant="outline"
+            className={`h-6 px-2 text-[10px] shadow-sm text-white ${
+              isError ? 'bg-gray-400' : trafficStatusColorClass
+            }`}
+          >
             Flow
-          </Button>
-          <Button variant="outline" className={`h-6 px-2 text-[10px] shadow-sm text-white ${trendColorClass}`}>
+          </LoadingButton>
+          <LoadingButton
+            isLoading={isFetching}
+            loadingText="..."
+            variant="outline"
+            className={`h-6 px-2 text-[10px] shadow-sm text-white ${
+              isError ? 'bg-gray-400' : trendColorClass
+            }`}
+          >
             Trend
-          </Button>
-          <Button variant="outline" className="h-6 px-2 text-[10px] shadow-sm bg-transparent">
+          </LoadingButton>
+          <LoadingButton
+            isLoading={isFetching}
+            loadingText="..."
+            variant="outline"
+            className="h-6 px-2 text-[10px] shadow-sm bg-transparent"
+          >
             Balanced
-          </Button>
+          </LoadingButton>
         </div>
       </CardContent>
     </Card>

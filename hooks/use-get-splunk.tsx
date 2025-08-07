@@ -20,14 +20,21 @@ export function useGetSplunk() {
   const splunkData = useQuery({
     queryKey: ['splunk-data'],
     queryFn: async (): Promise<SplunkDataItem[]> => {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Enhanced loading delay to demonstrate loading states
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Simulate potential network issues (uncomment to test error states)
+      // if (Math.random() < 0.1) {
+      //   throw new Error('Failed to fetch Splunk data');
+      // }
       
       // Return the imported JSON data
       return splunkApiData as SplunkDataItem[];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes (updated from deprecated cacheTime)
+    retry: 3,
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   return {
@@ -35,6 +42,8 @@ export function useGetSplunk() {
     isLoading: splunkData.isLoading,
     isError: splunkData.isError,
     error: splunkData.error,
-    refetch: splunkData.refetch
+    refetch: splunkData.refetch,
+    isFetching: splunkData.isFetching,
+    isSuccess: splunkData.isSuccess
   };
 }

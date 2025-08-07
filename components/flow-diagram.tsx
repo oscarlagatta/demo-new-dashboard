@@ -21,12 +21,15 @@ import {
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Loader2, RefreshCw, AlertCircle } from 'lucide-react'
 
 import { useGetSplunk } from "@/hooks/use-get-splunk"
 import { initialNodes, initialEdges, type AppNode } from "@/lib/flow-data"
 import CustomNode from "./custom-node"
 import SectionBackgroundNode from "./section-background-node"
 import { computeTrafficStatusColors } from "@/lib/traffic-status-utils"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const nodeTypes: NodeTypes = {
   custom: CustomNode,
@@ -47,8 +50,16 @@ const Flow = () => {
   const width = useStore((state) => state.width)
   const height = useStore((state) => state.height)
 
-  // Add Splunk data fetching
-  const { data: splunkData, isLoading, isError, error } = useGetSplunk()
+  // Add Splunk data fetching with enhanced loading states
+  const { 
+    data: splunkData, 
+    isLoading, 
+    isError, 
+    error, 
+    refetch, 
+    isFetching,
+    isSuccess 
+  } = useGetSplunk()
 
   // Function to find connected nodes and edges
   const findConnections = useCallback((nodeId: string) => {
@@ -72,6 +83,8 @@ const Flow = () => {
 
   // Handle node click
   const handleNodeClick = useCallback((nodeId: string) => {
+    if (isLoading || isFetching) return // Prevent interaction during loading
+    
     if (selectedNodeId === nodeId) {
       // Clicking the same node deselects it
       setSelectedNodeId(null)
@@ -84,7 +97,7 @@ const Flow = () => {
       setConnectedNodeIds(connectedNodes)
       setConnectedEdgeIds(connectedEdges)
     }
-  }, [selectedNodeId, findConnections])
+  }, [selectedNodeId, findConnections, isLoading, isFetching])
 
   // Get connected system names for display
   const getConnectedSystemNames = useCallback(() => {
@@ -235,43 +248,111 @@ const Flow = () => {
     })
   }, [edges, connectedEdgeIds, selectedNodeId])
 
+  const renderDataPanel = () => {
+    if (isLoading) {
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center space-x-2">
+            <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+            <span className="text-sm font-medium text-blue-600">Loading Splunk data...</span>
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-20 w-full" />
+          </div>
+        </div>
+      )
+    }
+
+    if (isError) {
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center space-x-2 text-red-600">
+            <AlertCircle className="h-4 w-4" />
+            <span className="text-sm font-medium">Error loading data</span>
+          </div>
+          <p className="text-sm text-red-500">
+            {error?.message || 'Failed to load Splunk data'}
+          </p>
+          <Button 
+            onClick={() => refetch()} 
+            size="sm" 
+            variant="outline"
+            disabled={isFetching}
+            className="w-full"
+          >
+            {isFetching ? (
+              <>
+                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                Retrying...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-3 w-3" />
+                Retry
+              </>
+            )}
+          </Button>
+        </div>
+      )
+    }
+
+    if (isSuccess && splunkData) {
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-medium mb-1">Traffic Status Summary:</h4>
+            {isFetching && (
+              <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+            )}
+          </div>
+          <div className="text-xs bg-gray-50 p-2 rounded">
+            {Object.entries(computeTrafficStatusColors(splunkData)).map(([aitNum, color]) => (
+              <div key={aitNum} className="flex justify-between">
+                <span>AIT {aitNum}:</span>
+                <span className={`px-1 rounded text-white ${
+                  color === 'green' ? 'bg-green-500' : 
+                  color === 'red' ? 'bg-red-500' : 'bg-gray-400'
+                }`}>
+                  {color}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div>
+            <h4 className="text-xs font-medium mb-1">Raw Data (first 5 entries):</h4>
+            <pre className="text-xs bg-gray-50 p-2 rounded overflow-auto max-h-32">
+              {JSON.stringify(splunkData.slice(0, 5), null, 2)}
+            </pre>
+          </div>
+        </div>
+      )
+    }
+
+    return null
+  }
+
   return (
     <div className="h-full w-full relative">
-      {/* Splunk Data Display */}
+      {/* Enhanced Splunk Data Display Panel */}
       <div className="absolute top-4 right-4 z-10 max-w-md max-h-96 overflow-auto bg-white border rounded-lg shadow-lg p-4">
-        <h3 className="text-sm font-semibold mb-2">Splunk Data Analysis</h3>
-        {isLoading && <p className="text-sm text-gray-500">Loading Splunk data...</p>}
-        {isError && (
-          <p className="text-sm text-red-500">
-            Error loading data: {error?.message || 'Unknown error'}
-          </p>
-        )}
-        {splunkData && (
-          <div className="space-y-2">
-            <div>
-              <h4 className="text-xs font-medium mb-1">Traffic Status Summary:</h4>
-              <div className="text-xs bg-gray-50 p-2 rounded">
-                {Object.entries(computeTrafficStatusColors(splunkData)).map(([aitNum, color]) => (
-                  <div key={aitNum} className="flex justify-between">
-                    <span>AIT {aitNum}:</span>
-                    <span className={`px-1 rounded text-white ${
-                      color === 'green' ? 'bg-green-500' : 
-                      color === 'red' ? 'bg-red-500' : 'bg-gray-400'
-                    }`}>
-                      {color}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium mb-1">Raw Data (first 5 entries):</h4>
-              <pre className="text-xs bg-gray-50 p-2 rounded overflow-auto max-h-32">
-                {JSON.stringify(splunkData.slice(0, 5), null, 2)}
-              </pre>
-            </div>
-          </div>
-        )}
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold">Splunk Data Analysis</h3>
+          {!isLoading && !isError && (
+            <Button 
+              onClick={() => refetch()} 
+              size="sm" 
+              variant="ghost"
+              disabled={isFetching}
+              className="h-6 w-6 p-0"
+            >
+              <RefreshCw className={`h-3 w-3 ${isFetching ? 'animate-spin' : ''}`} />
+            </Button>
+          )}
+        </div>
+        {renderDataPanel()}
       </div>
 
       <ReactFlow
@@ -292,7 +373,8 @@ const Flow = () => {
         <Controls />
         <Background gap={16} size={1} />
       </ReactFlow>
-      {/* Connected Systems Panel */}
+      
+      {/* Enhanced Connected Systems Panel */}
       {selectedNodeId && (
         <div className="absolute top-4 left-4 z-10 max-w-sm bg-white border rounded-lg shadow-lg p-4">
           <h3 className="text-sm font-semibold mb-2 text-gray-800">
@@ -313,7 +395,8 @@ const Flow = () => {
             </div>
             <button
               onClick={() => handleNodeClick(selectedNodeId)}
-              className="text-xs text-blue-600 hover:text-blue-800 underline"
+              className="text-xs text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
+              disabled={isLoading || isFetching}
             >
               Clear Selection
             </button>
@@ -324,7 +407,14 @@ const Flow = () => {
   )
 }
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 3,
+    },
+  },
+})
 
 export function FlowDiagram() {
   return (
