@@ -9,8 +9,8 @@ export interface TrafficStatusMapping {
 /**
  * Computes traffic status colors for all AITs based on Splunk data
  * Logic:
- * - If any entry has "is_TRAFFIC_FOLLOWING": false, set to red
- * - If all entries have "is_TRAFFIC_FOLLOWING": true, set to green  
+ * - If any entry has "is_TRAFFIC_FOLLOWING": "No", set to red
+ * - If all entries have "is_TRAFFIC_FOLLOWING": "Yes", set to green  
  * - If all entries are null or field is missing, set to grey
  */
 export function computeTrafficStatusColors(splunkData: SplunkDataItem[]): TrafficStatusMapping {
@@ -27,9 +27,9 @@ export function computeTrafficStatusColors(splunkData: SplunkDataItem[]): Traffi
 
     // Convert string values to boolean/null
     let trafficValue: boolean | null = null
-    if (trafficFollowing === "true") {
+    if (trafficFollowing === "Yes") {
       trafficValue = true
-    } else if (trafficFollowing === "false") {
+    } else if (trafficFollowing === "No") {
       trafficValue = false
     }
     // If trafficFollowing is null or any other value, trafficValue remains null
