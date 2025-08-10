@@ -10,6 +10,53 @@ import type {
 } from "@/types/splunk-transaction"
 import rawData from "@/lib/splunk-transaction-search-api.json"
 
+/**
+ * Expected JSON format for /lib/splunk-transaction-search-api.json:
+ *
+ * [
+ *   {
+ *     "id": "T0P7R96NFJWBBSTZ",
+ *     "results": [
+ *       {
+ *         "source": "farm4_prod_db_GFD",
+ *         "sourceType": "E2EUSWireGfdWtxTranInfo",
+ *         "_raw": {
+ *           "WTX_GFD_ID": "188452803",
+ *           "SMH_SOURCE": "CPO",
+ *           "SMH_DEST": "FED",
+ *           "RQO_TRAN_DATE": "2025-07-14 00:00:00",
+ *           "RQO_TRAN_TIME": "10:37:39",
+ *           "RQO_TRAN_DATE_ALT": "2025-07-14 00:00:00",
+ *           "RQO_TRAN_TIME_ALT": "06:37:39",
+ *           "XQQ_CUST_CNTRY_CODE": "US",
+ *           "AQQ_CUST_A_NUM": "413-375004275731",
+ *           "AQQ_BILLING_CURR_CODE": "USD",
+ *           "TBT_TRAN_TYPE": "IT",
+ *           "TBT_REF_NUM": "2025071400315174",
+ *           "TBT_BILLING_AMT": "8700.00",
+ *           "TBT_MOD_AMT": "8700.00",
+ *           "TBT_SCH_REF_NUM": "ENFORGE LLC GENERAL ACCOUNT",
+ *           "TPP_CNTRY_CODE": "US",
+ *           "TPP_BANK_CNTRY_CODE": "US",
+ *           "TPP_CUST_A_NUM": "1853613741",
+ *           "TPP_CURR_CODE": "USD",
+ *           "TPP_TRAN_AMT": "8700.00",
+ *           "DBA_ENTRY_METHOD": "M",
+ *           "DBA_APPROVAL_TYPE_REQ": "S",
+ *           "RUA_20BYTE_STRING_001": "T0P7R96NFJWBBSTZ",
+ *           "RRR_ACTION_CODE": "A",
+ *           "RRR_SCORE": "091",
+ *           "BCC_CPS_CORRELATION": "T0P7R96NFJWBBSTZ",
+ *           "REC_CRT_TS": "2025-07-14T06:37:44.771Z",
+ *           "DBA_APPROVED_BY_USERID2": "USR10421"
+ *         }
+ *       }
+ *     ]
+ *   }
+ * ]
+ */
+
+// Known 16-char transaction ID from the dataset
 const KNOWN_ID = "T0P7R96NFJWBBSTZ"
 const ID_REGEX = /^[A-Z0-9]{16}$/
 
@@ -22,13 +69,49 @@ class ApiError extends Error {
   }
 }
 
-// The JSON file only includes { id, results }, so define the dataset entry accordingly.
+// DatasetEntry type used internally for the local dataset
 type DatasetEntry = {
   id: string
   results: SplunkTransactionDetails
 }
 
-const DATASET = rawData as DatasetEntry[]
+// Normalize any imported JSON into DatasetEntry[]
+function normalizeDataset(raw: unknown): DatasetEntry[] {
+  // Case 1: Already an array of entries
+  if (Array.isArray(raw)) {
+    return raw
+      .map((item: any) => {
+        if (item && typeof item === "object" && "id" in item && "results" in item && Array.isArray(item.results)) {
+          return {
+            id: String(item.id),
+            results: item.results as SplunkTransactionDetails,
+          } as DatasetEntry
+        }
+        return null
+      })
+      .filter(Boolean) as DatasetEntry[]
+  }
+
+  // Case 2: Object wrapper, e.g. { data: [...] }
+  if (raw && typeof raw === "object") {
+    const maybeData = (raw as any).data
+    if (Array.isArray(maybeData)) {
+      return normalizeDataset(maybeData)
+    }
+
+    // Case 3: Map-like object keyed by transaction ID
+    const values = Object.values(raw as Record<string, unknown>)
+    if (values.length > 0) {
+      return normalizeDataset(values)
+    }
+  }
+
+  console.warn("[use-transaction-search] Could not normalize dataset; got unexpected shape.")
+  return []
+}
+
+// Ensure DATASET matches DatasetEntry[]
+const DATASET: DatasetEntry[] = normalizeDataset(rawData as unknown)
 
 // Map Splunk action code to normalized status
 function mapStatus(code?: string): TransactionSummary["status"] {
@@ -52,30 +135,26 @@ function toNumber(value?: string): number {
 
 // Build ISO datetime string from Splunk fields
 function toIsoDate(raw: Raw): string {
-  // Prefer REC_CRT_TS if it looks like ISO
   if (raw.REC_CRT_TS && !Number.isNaN(Date.parse(raw.REC_CRT_TS))) {
     return new Date(raw.REC_CRT_TS).toISOString()
   }
-  // Fallback to RQO_TRAN_DATE_ALT + RQO_TRAN_TIME_ALT if available
   const dateAlt = (raw.RQO_TRAN_DATE_ALT || "").trim()
   const timeAlt = (raw.RQO_TRAN_TIME_ALT || "").trim()
   const combined = `${dateAlt.split(" ")[0]}T${timeAlt}Z`
   if (!Number.isNaN(Date.parse(combined))) return new Date(combined).toISOString()
 
-  // Last resort: try RQO_TRAN_DATE + RQO_TRAN_TIME
   const date = (raw.RQO_TRAN_DATE || "").trim().split(" ")[0]
   const time = (raw.RQO_TRAN_TIME || "").trim()
   const fallback = `${date}T${time}Z`
   return !Number.isNaN(Date.parse(fallback)) ? new Date(fallback).toISOString() : new Date().toISOString()
 }
 
-// Compute a normalized summary from the first result (typical for single-ID searches)
+// Compute a normalized summary from the first result
 function buildSummary(id: string, results: SplunkTransactionDetails): TransactionSummary {
   const first = results[0]?._raw as Raw | undefined
   const action = first?.RRR_ACTION_CODE
   const status = mapStatus(action)
 
-  // Prefer billing currency and amount; fallback to payment fields
   const currency = first?.AQQ_BILLING_CURR_CODE || first?.TPP_CURR_CODE || "USD"
   const amount = toNumber(first?.TBT_BILLING_AMT || first?.TPP_TRAN_AMT)
 
