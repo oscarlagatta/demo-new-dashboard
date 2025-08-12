@@ -1,5 +1,22 @@
 "use client"
 
+/**
+ * Transaction search hook (local dataset)
+ *
+ * Dataset format (lib/splunk-transaction-search-api.json):
+ * - Flat array of SplunkTransactionDetail objects:
+ *   [
+ *     {
+ *       "source": "farm4_prod_db_GFD",
+ *       "sourceType": "E2EUSWireGfdWtxTranInfo",
+ *       "_raw": { ...splunk fields... }
+ *     }
+ *   ]
+ *
+ * We search this array by matching the provided transaction ID against
+ * _raw.RUA_20BYTE_STRING_001 or _raw.BCC_CPS_CORRELATION.
+ */
+
 import { useState, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import type {
@@ -10,53 +27,7 @@ import type {
 } from "@/types/splunk-transaction"
 import rawData from "@/lib/splunk-transaction-search-api.json"
 
-/**
- * Expected JSON format for /lib/splunk-transaction-search-api.json:
- *
- * [
- *   {
- *     "id": "T0P7R96NFJWBBSTZ",
- *     "results": [
- *       {
- *         "source": "farm4_prod_db_GFD",
- *         "sourceType": "E2EUSWireGfdWtxTranInfo",
- *         "_raw": {
- *           "WTX_GFD_ID": "188452803",
- *           "SMH_SOURCE": "CPO",
- *           "SMH_DEST": "FED",
- *           "RQO_TRAN_DATE": "2025-07-14 00:00:00",
- *           "RQO_TRAN_TIME": "10:37:39",
- *           "RQO_TRAN_DATE_ALT": "2025-07-14 00:00:00",
- *           "RQO_TRAN_TIME_ALT": "06:37:39",
- *           "XQQ_CUST_CNTRY_CODE": "US",
- *           "AQQ_CUST_A_NUM": "413-375004275731",
- *           "AQQ_BILLING_CURR_CODE": "USD",
- *           "TBT_TRAN_TYPE": "IT",
- *           "TBT_REF_NUM": "2025071400315174",
- *           "TBT_BILLING_AMT": "8700.00",
- *           "TBT_MOD_AMT": "8700.00",
- *           "TBT_SCH_REF_NUM": "ENFORGE LLC GENERAL ACCOUNT",
- *           "TPP_CNTRY_CODE": "US",
- *           "TPP_BANK_CNTRY_CODE": "US",
- *           "TPP_CUST_A_NUM": "1853613741",
- *           "TPP_CURR_CODE": "USD",
- *           "TPP_TRAN_AMT": "8700.00",
- *           "DBA_ENTRY_METHOD": "M",
- *           "DBA_APPROVAL_TYPE_REQ": "S",
- *           "RUA_20BYTE_STRING_001": "T0P7R96NFJWBBSTZ",
- *           "RRR_ACTION_CODE": "A",
- *           "RRR_SCORE": "091",
- *           "BCC_CPS_CORRELATION": "T0P7R96NFJWBBSTZ",
- *           "REC_CRT_TS": "2025-07-14T06:37:44.771Z",
- *           "DBA_APPROVED_BY_USERID2": "USR10421"
- *         }
- *       }
- *     ]
- *   }
- * ]
- */
-
-// Known 16-char transaction ID from the dataset
+// Known, valid 16-character transaction ID in the dataset (useful for local testing)
 const KNOWN_ID = "T0P7R96NFJWBBSTZ"
 const ID_REGEX = /^[A-Z0-9]{16}$/
 
@@ -69,49 +40,8 @@ class ApiError extends Error {
   }
 }
 
-// DatasetEntry type used internally for the local dataset
-type DatasetEntry = {
-  id: string
-  results: SplunkTransactionDetails
-}
-
-// Normalize any imported JSON into DatasetEntry[]
-function normalizeDataset(raw: unknown): DatasetEntry[] {
-  // Case 1: Already an array of entries
-  if (Array.isArray(raw)) {
-    return raw
-      .map((item: any) => {
-        if (item && typeof item === "object" && "id" in item && "results" in item && Array.isArray(item.results)) {
-          return {
-            id: String(item.id),
-            results: item.results as SplunkTransactionDetails,
-          } as DatasetEntry
-        }
-        return null
-      })
-      .filter(Boolean) as DatasetEntry[]
-  }
-
-  // Case 2: Object wrapper, e.g. { data: [...] }
-  if (raw && typeof raw === "object") {
-    const maybeData = (raw as any).data
-    if (Array.isArray(maybeData)) {
-      return normalizeDataset(maybeData)
-    }
-
-    // Case 3: Map-like object keyed by transaction ID
-    const values = Object.values(raw as Record<string, unknown>)
-    if (values.length > 0) {
-      return normalizeDataset(values)
-    }
-  }
-
-  console.warn("[use-transaction-search] Could not normalize dataset; got unexpected shape.")
-  return []
-}
-
-// Ensure DATASET matches DatasetEntry[]
-const DATASET: DatasetEntry[] = normalizeDataset(rawData as unknown)
+// Treat the imported JSON as an array of SplunkTransactionDetail
+const RAW_DETAILS: SplunkTransactionDetails = rawData as unknown as SplunkTransactionDetails
 
 // Map Splunk action code to normalized status
 function mapStatus(code?: string): TransactionSummary["status"] {
@@ -189,25 +119,34 @@ function buildSummary(id: string, results: SplunkTransactionDetails): Transactio
   }
 }
 
-// Simulate a local "fetch" with small latency; shape must match TransactionApiResponse
+// Local "fetch" against the flat array dataset
 async function fetchTransactionLocal(id: string): Promise<TransactionApiResponse> {
   const normalized = id.trim().toUpperCase()
 
-  // small artificial delay to maintain existing UX
+  if (!ID_REGEX.test(normalized)) {
+    throw new ApiError("Invalid transaction ID format", 400)
+  }
+
+  // small artificial delay to keep UX parity
   await new Promise((r) => setTimeout(r, 250))
 
-  const match = DATASET.find((entry) => entry.id.toUpperCase() === normalized)
-  if (!match) {
+  const matches = RAW_DETAILS.filter((d) => {
+    const raw = d?._raw
+    const ids = [raw?.RUA_20BYTE_STRING_001, raw?.BCC_CPS_CORRELATION].filter(Boolean) as string[]
+    return ids.some((x) => x.toUpperCase() === normalized)
+  })
+
+  if (matches.length === 0) {
     throw new ApiError("Transaction not found", 404)
   }
 
-  const summary = buildSummary(match.id, match.results)
+  const summary = buildSummary(normalized, matches)
 
   // Return a deep-copied, shape-compliant object
   return JSON.parse(
     JSON.stringify({
-      id: match.id,
-      results: match.results,
+      id: normalized,
+      results: matches,
       summary,
     } satisfies TransactionApiResponse),
   )
@@ -216,6 +155,7 @@ async function fetchTransactionLocal(id: string): Promise<TransactionApiResponse
 /**
  * useTransactionSearch
  * - Reads from local JSON dataset and returns TransactionApiResponse (with summary).
+ * - Query is disabled until a valid 16-char ID is set.
  */
 export function useTransactionSearch(defaultId: string = KNOWN_ID) {
   const [queryId, setQueryId] = useState<string>(defaultId.toUpperCase())
