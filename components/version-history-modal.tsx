@@ -1,19 +1,28 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Clock, User, RotateCcw, X } from "lucide-react"
+import { Clock, User, RotateCcw, X, Edit3, Link, Tag, FolderTree, Type } from "lucide-react"
 import { ConfirmationDialog } from "@/components/confirmation-dialog"
+
+interface NodePropertyChange {
+  property: "label" | "title" | "subtext" | "classification" | "parentGroup" | "connections"
+  oldValue: string | string[]
+  newValue: string | string[]
+  icon: React.ComponentType<{ className?: string }>
+}
 
 interface VersionHistoryEntry {
   id: string
   version: string
   timestamp: string
   author: string
-  changes: string[]
+  propertyChanges: NodePropertyChange[]
   status: "current" | "previous"
 }
 
@@ -26,14 +35,26 @@ interface VersionHistoryModalProps {
   isLoading?: boolean
 }
 
-// Mock version history data - in a real app, this would come from an API
 const generateVersionHistory = (systemId: string): VersionHistoryEntry[] => [
   {
     id: `${systemId}-v3`,
     version: "3.2.1",
     timestamp: "2024-01-15T14:30:00Z",
     author: "John Smith",
-    changes: ["Updated validation rules", "Enhanced error handling", "Performance optimizations"],
+    propertyChanges: [
+      {
+        property: "label",
+        oldValue: "Payment Gateway v3.2.0",
+        newValue: "Payment Gateway v3.2.1",
+        icon: Type,
+      },
+      {
+        property: "classification",
+        oldValue: "Standard",
+        newValue: "Critical",
+        icon: Tag,
+      },
+    ],
     status: "current",
   },
   {
@@ -41,7 +62,20 @@ const generateVersionHistory = (systemId: string): VersionHistoryEntry[] => [
     version: "3.2.0",
     timestamp: "2024-01-10T09:15:00Z",
     author: "Sarah Johnson",
-    changes: ["Added new payment methods", "Updated security protocols", "Bug fixes"],
+    propertyChanges: [
+      {
+        property: "subtext",
+        oldValue: "Handles credit card transactions",
+        newValue: "Handles credit card and digital wallet transactions",
+        icon: Edit3,
+      },
+      {
+        property: "connections",
+        oldValue: ["Database", "Auth Service"],
+        newValue: ["Database", "Auth Service", "Fraud Detection"],
+        icon: Link,
+      },
+    ],
     status: "previous",
   },
   {
@@ -49,7 +83,20 @@ const generateVersionHistory = (systemId: string): VersionHistoryEntry[] => [
     version: "3.1.5",
     timestamp: "2024-01-05T16:45:00Z",
     author: "Mike Chen",
-    changes: ["Database schema updates", "API endpoint modifications", "UI improvements"],
+    propertyChanges: [
+      {
+        property: "parentGroup",
+        oldValue: "Legacy Systems",
+        newValue: "Core Services",
+        icon: FolderTree,
+      },
+      {
+        property: "title",
+        oldValue: "Payment Processor",
+        newValue: "Payment Gateway",
+        icon: Type,
+      },
+    ],
     status: "previous",
   },
   {
@@ -57,7 +104,20 @@ const generateVersionHistory = (systemId: string): VersionHistoryEntry[] => [
     version: "3.1.4",
     timestamp: "2023-12-28T11:20:00Z",
     author: "Lisa Rodriguez",
-    changes: ["Initial deployment", "Core functionality implementation"],
+    propertyChanges: [
+      {
+        property: "label",
+        oldValue: "New Payment System",
+        newValue: "Payment Gateway v3.1.4",
+        icon: Type,
+      },
+      {
+        property: "classification",
+        oldValue: "Development",
+        newValue: "Standard",
+        icon: Tag,
+      },
+    ],
     status: "previous",
   },
 ]
@@ -88,6 +148,25 @@ export function VersionHistoryModal({
     })
   }
 
+  const formatPropertyName = (property: string) => {
+    const propertyNames: Record<string, string> = {
+      label: "Label",
+      title: "Title",
+      subtext: "Description",
+      classification: "Classification",
+      parentGroup: "Parent Group",
+      connections: "Connections",
+    }
+    return propertyNames[property] || property
+  }
+
+  const formatPropertyValue = (value: string | string[]) => {
+    if (Array.isArray(value)) {
+      return value.join(", ")
+    }
+    return value
+  }
+
   const handleRevertClick = (versionId: string, version: string) => {
     setConfirmDialog({
       isOpen: true,
@@ -109,13 +188,13 @@ export function VersionHistoryModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl max-h-[80vh] bg-white border border-slate-200">
+        <DialogContent className="max-w-3xl max-h-[85vh] bg-white border border-slate-200">
           <DialogHeader className="border-b border-slate-200 pb-4">
             <div className="flex items-center justify-between">
               <div>
                 <DialogTitle className="text-xl font-semibold text-slate-900 flex items-center gap-2">
                   <Clock className="h-5 w-5 text-blue-700" />
-                  Version History
+                  Node Change History
                 </DialogTitle>
                 <DialogDescription className="text-slate-600 mt-1">{systemName}</DialogDescription>
               </div>
@@ -150,7 +229,7 @@ export function VersionHistoryModal({
                         )}
                       </div>
 
-                      <div className="flex items-center gap-4 text-sm text-slate-600 mb-3">
+                      <div className="flex items-center gap-4 text-sm text-slate-600 mb-4">
                         <div className="flex items-center gap-1">
                           <User className="h-3 w-3" />
                           {entry.author}
@@ -161,16 +240,42 @@ export function VersionHistoryModal({
                         </div>
                       </div>
 
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-slate-700">Changes:</p>
-                        <ul className="text-sm text-slate-600 space-y-1">
-                          {entry.changes.map((change, changeIndex) => (
-                            <li key={changeIndex} className="flex items-start gap-2">
-                              <span className="text-slate-400 mt-1">•</span>
-                              <span>{change}</span>
-                            </li>
-                          ))}
-                        </ul>
+                      <div className="space-y-3">
+                        <p className="text-sm font-medium text-slate-700">Property Changes:</p>
+                        <div className="space-y-3">
+                          {entry.propertyChanges.map((change, changeIndex) => {
+                            const IconComponent = change.icon
+                            return (
+                              <div key={changeIndex} className="bg-slate-50 border border-slate-200 rounded-md p-3">
+                                <div className="flex items-start gap-3">
+                                  <div className="flex-shrink-0 mt-0.5">
+                                    <IconComponent className="h-4 w-4 text-blue-600" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className="text-sm font-medium text-slate-900">
+                                        {formatPropertyName(change.property)}
+                                      </span>
+                                      <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">
+                                        Modified
+                                      </Badge>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <div className="text-xs text-slate-500">From:</div>
+                                      <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 font-mono">
+                                        {formatPropertyValue(change.oldValue)}
+                                      </div>
+                                      <div className="text-xs text-slate-500">To:</div>
+                                      <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1 font-mono">
+                                        {formatPropertyValue(change.newValue)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
                     </div>
 
@@ -208,16 +313,16 @@ export function VersionHistoryModal({
         isOpen={confirmDialog.isOpen}
         onClose={() => setConfirmDialog({ isOpen: false, versionId: "", version: "" })}
         onConfirm={handleConfirmRevert}
-        title="Revert to Previous Version"
+        title="Revert Node Properties"
         description={`Are you sure you want to revert "${systemName}" to version ${confirmDialog.version}? This action will:
 
-• Replace the current system configuration with the selected version
-• Create a backup of the current version before reverting
-• Potentially affect connected systems and data flows
-• Require system restart and validation
+• Restore all node properties (label, title, description, classification, etc.) to their previous values
+• Update any connection changes made since this version
+• Create a backup of the current node state before reverting
+• Potentially affect related nodes and system integrations
 
 This action can be undone by reverting to a newer version, but any unsaved changes will be lost.`}
-        confirmText="Revert System"
+        confirmText="Revert Node"
         cancelText="Cancel"
         isDestructive={true}
       />
