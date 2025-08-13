@@ -34,10 +34,10 @@ export default function NodeManagerPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading flow data...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600 mx-auto mb-4"></div>
+          <p className="text-slate-600 font-medium">Loading system data...</p>
         </div>
       </div>
     )
@@ -45,10 +45,12 @@ export default function NodeManagerPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 mb-4">Error loading flow data</p>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
+          <p className="text-slate-700 mb-4 font-medium">Error loading system data</p>
+          <Button onClick={() => window.location.reload()} className="bg-slate-700 hover:bg-slate-800">
+            Retry
+          </Button>
         </div>
       </div>
     )
@@ -134,26 +136,26 @@ export default function NodeManagerPage() {
   const getStatusColor = (status) => {
     switch (status) {
       case "active":
-        return "bg-green-100 text-green-800"
+        return "bg-emerald-50 text-emerald-700 border border-emerald-200"
       case "inactive":
-        return "bg-red-100 text-red-800"
+        return "bg-slate-100 text-slate-600 border border-slate-300"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-50 text-gray-600 border border-gray-300"
     }
   }
 
   const getClassificationColor = (classification) => {
     switch (classification) {
       case "origination":
-        return "bg-blue-100 text-blue-800"
+        return "bg-blue-50 text-blue-700 border border-blue-200"
       case "payment validation and routing":
-        return "bg-purple-100 text-purple-800"
+        return "bg-indigo-50 text-indigo-700 border border-indigo-200"
       case "middleware":
-        return "bg-orange-100 text-orange-800"
+        return "bg-amber-50 text-amber-700 border border-amber-200"
       case "payment processing, sanctions and investigation":
-        return "bg-pink-100 text-pink-800"
+        return "bg-violet-50 text-violet-700 border border-violet-200"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-50 text-gray-600 border border-gray-300"
     }
   }
 
@@ -171,21 +173,25 @@ export default function NodeManagerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="min-h-screen bg-slate-50">
+      <div className="bg-white border-b border-slate-200 px-6 py-5 shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-6">
             <Link href="/">
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Dashboard
               </Button>
             </Link>
-            <div className="h-6 w-px bg-gray-300" />
-            <h1 className="text-xl font-semibold text-gray-900">Node Manager</h1>
+            <div className="h-6 w-px bg-slate-300" />
+            <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Node Management System</h1>
           </div>
           <Link href="/">
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-slate-300 text-slate-600 hover:bg-slate-50 bg-transparent"
+            >
               <Home className="w-4 h-4 mr-2" />
               Dashboard
             </Button>
@@ -193,73 +199,82 @@ export default function NodeManagerPage() {
         </div>
       </div>
 
-      <div className="container mx-auto p-6 max-w-6xl">
-        <div className="flex justify-between items-center mb-6">
+      <div className="container mx-auto p-6 max-w-7xl">
+        <div className="flex justify-between items-center mb-8">
           <div>
-            <p className="text-gray-600">Manage payment processing system nodes and their connections</p>
+            <p className="text-slate-600 font-medium">Manage payment processing system nodes and their connections</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <Button
               onClick={() => setIsConnectionModalOpen(true)}
               variant="outline"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 border-slate-300 text-slate-700 hover:bg-slate-50"
             >
               <LinkIcon className="h-4 w-4" />
               Create Connection
             </Button>
-            <Button onClick={handleCreateNode} className="flex items-center gap-2">
+            <Button onClick={handleCreateNode} className="flex items-center gap-2 bg-slate-700 hover:bg-slate-800">
               <Plus className="h-4 w-4" />
               Create Node
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">{activeNodes}</div>
-              <div className="text-sm text-gray-600">Active Nodes</div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card className="border-slate-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="text-2xl font-bold text-emerald-700">{activeNodes}</div>
+              <div className="text-sm text-slate-600 font-medium mt-1">Active Nodes</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-red-600">{inactiveNodes}</div>
-              <div className="text-sm text-gray-600">Inactive Nodes</div>
+          <Card className="border-slate-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="text-2xl font-bold text-slate-600">{inactiveNodes}</div>
+              <div className="text-sm text-slate-600 font-medium mt-1">Inactive Nodes</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-600">{totalConnections}</div>
-              <div className="text-sm text-gray-600">Total Connections</div>
+          <Card className="border-slate-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="text-2xl font-bold text-blue-700">{totalConnections}</div>
+              <div className="text-sm text-slate-600 font-medium mt-1">Total Connections</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-purple-600">{backgroundNodes.length}</div>
-              <div className="text-sm text-gray-600">Background Groups</div>
+          <Card className="border-slate-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="text-2xl font-bold text-indigo-700">{backgroundNodes.length}</div>
+              <div className="text-sm text-slate-600 font-medium mt-1">Background Groups</div>
             </CardContent>
           </Card>
         </div>
 
         <Tabs defaultValue="nodes" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="nodes">Nodes ({nodes.length})</TabsTrigger>
-            <TabsTrigger value="connections">Connections ({edges.length})</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 bg-slate-100 border border-slate-200">
+            <TabsTrigger value="nodes" className="data-[state=active]:bg-white data-[state=active]:text-slate-900">
+              Nodes ({nodes.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="connections"
+              className="data-[state=active]:bg-white data-[state=active]:text-slate-900"
+            >
+              Connections ({edges.length})
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="nodes" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <TabsContent value="nodes" className="space-y-6 mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {nodes.map((node) => {
                 const status = getNodeStatus(node)
                 const connections = getNodeConnections(node.id)
 
                 return (
-                  <Card key={node.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="pb-3">
+                  <Card key={node.id} className="hover:shadow-md transition-all duration-200 border-slate-200 bg-white">
+                    <CardHeader className="pb-4">
                       <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-lg">{getNodeDisplayName(node)}</CardTitle>
-                          <CardDescription className="text-sm text-gray-500">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg font-semibold text-slate-900">
+                            {getNodeDisplayName(node)}
+                          </CardTitle>
+                          <CardDescription className="text-sm text-slate-500 mt-1">
                             {node.subtext || `ID: ${node.id}`}
                           </CardDescription>
                         </div>
@@ -268,7 +283,7 @@ export default function NodeManagerPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEditNode(node)}
-                            className="h-8 w-8 p-0"
+                            className="h-8 w-8 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -276,7 +291,7 @@ export default function NodeManagerPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteNode(node.id)}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                            className="h-8 w-8 p-0 text-slate-500 hover:text-red-600 hover:bg-red-50"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -284,15 +299,15 @@ export default function NodeManagerPage() {
                       </div>
                     </CardHeader>
                     <CardContent className="pt-0">
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         <div className="flex flex-wrap gap-2">
                           <Badge className={getStatusColor(status)}>{status}</Badge>
                           {node.class && <Badge className={getClassificationColor(node.class)}>{node.class}</Badge>}
                         </div>
-                        <div className="text-sm text-gray-600">
-                          <div>Connections: {connections}</div>
+                        <div className="text-sm text-slate-600 space-y-1">
+                          <div className="font-medium">Connections: {connections}</div>
                           {node.parentId && (
-                            <div>
+                            <div className="text-slate-500">
                               Parent: {backgroundNodes.find((bg) => bg.id === node.parentId)?.label || node.parentId}
                             </div>
                           )}
@@ -305,7 +320,7 @@ export default function NodeManagerPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="connections" className="space-y-4">
+          <TabsContent value="connections" className="space-y-4 mt-6">
             <div className="grid gap-4">
               {edges.map((edge) => {
                 const sourceNode = nodes.find((n) => n.id === edge.source)
@@ -314,18 +329,18 @@ export default function NodeManagerPage() {
                   : [nodes.find((n) => n.id === edge.target)].filter(Boolean)
 
                 return (
-                  <Card key={edge.id} className="hover:shadow-sm transition-shadow">
-                    <CardContent className="p-4">
+                  <Card key={edge.id} className="hover:shadow-sm transition-shadow border-slate-200 bg-white">
+                    <CardContent className="p-5">
                       <div className="flex justify-between items-center">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="font-medium">{getNodeDisplayName(sourceNode)}</span>
-                            <span className="text-gray-400">→</span>
-                            <span className="font-medium">
+                          <div className="flex items-center gap-3 text-sm">
+                            <span className="font-semibold text-slate-900">{getNodeDisplayName(sourceNode)}</span>
+                            <span className="text-slate-400">→</span>
+                            <span className="font-semibold text-slate-900">
                               {targetNodes.map((node) => getNodeDisplayName(node)).join(", ")}
                             </span>
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-xs text-slate-500 mt-2 font-medium">
                             Type: {edge.type || "default"} • ID: {edge.id}
                           </div>
                         </div>
@@ -333,7 +348,7 @@ export default function NodeManagerPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteConnection(edge.id)}
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                          className="h-8 w-8 p-0 text-slate-500 hover:text-red-600 hover:bg-red-50"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

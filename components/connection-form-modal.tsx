@@ -64,18 +64,20 @@ export function ConnectionFormModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Create New Connection</DialogTitle>
+      <DialogContent className="sm:max-w-[500px] border-slate-200 shadow-lg">
+        <DialogHeader className="pb-4">
+          <DialogTitle className="text-xl font-semibold text-slate-900">Create New Connection</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="sourceId">Source Node</Label>
+            <Label htmlFor="sourceId" className="text-sm font-medium text-slate-700">
+              Source Node
+            </Label>
             <Select
               value={formData.sourceId}
               onValueChange={(value) => setFormData({ ...formData, sourceId: value, targetId: "" })}
             >
-              <SelectTrigger>
+              <SelectTrigger className="border-slate-300 focus:border-slate-500 focus:ring-slate-500">
                 <SelectValue placeholder="Select source node" />
               </SelectTrigger>
               <SelectContent>
@@ -89,13 +91,15 @@ export function ConnectionFormModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="targetId">Target Node</Label>
+            <Label htmlFor="targetId" className="text-sm font-medium text-slate-700">
+              Target Node
+            </Label>
             <Select
               value={formData.targetId}
               onValueChange={(value) => setFormData({ ...formData, targetId: value })}
               disabled={!formData.sourceId}
             >
-              <SelectTrigger>
+              <SelectTrigger className="border-slate-300 focus:border-slate-500 focus:ring-slate-500">
                 <SelectValue placeholder="Select target node" />
               </SelectTrigger>
               <SelectContent>
@@ -109,9 +113,11 @@ export function ConnectionFormModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="type">Connection Type</Label>
+            <Label htmlFor="type" className="text-sm font-medium text-slate-700">
+              Connection Type
+            </Label>
             <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
-              <SelectTrigger>
+              <SelectTrigger className="border-slate-300 focus:border-slate-500 focus:ring-slate-500">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -123,16 +129,25 @@ export function ConnectionFormModal({
           </div>
 
           {formData.sourceId && availableTargets.length === 0 && (
-            <p className="text-sm text-yellow-600 bg-yellow-50 p-2 rounded">
+            <p className="text-sm text-amber-700 bg-amber-50 p-3 rounded border border-amber-200">
               No available targets. All possible connections from this source already exist.
             </p>
           )}
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="flex justify-end space-x-3 pt-6 border-t border-slate-200">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="border-slate-300 text-slate-700 hover:bg-slate-50 bg-transparent"
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || !formData.sourceId || !formData.targetId}>
+            <Button
+              type="submit"
+              disabled={isLoading || !formData.sourceId || !formData.targetId}
+              className="bg-slate-700 hover:bg-slate-800"
+            >
               {isLoading ? "Creating..." : "Create Connection"}
             </Button>
           </div>

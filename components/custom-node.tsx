@@ -75,21 +75,21 @@ const CustomNode = ({ data, id }: NodeProps<CustomNodeType>) => {
 
   // Determine styling based on selection state and loading
   const getCardClassName = () => {
-    let baseClass = "border-2 border-[rgb(10,49,97)] shadow-md cursor-pointer transition-all duration-200"
+    let baseClass = "border-2 border-slate-300 shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md"
 
     // Loading state styling
     if (isLoading || isFetching) {
-      baseClass += " bg-gray-50"
+      baseClass += " bg-slate-50"
     } else if (isError) {
       baseClass += " bg-red-50 border-red-200"
     } else {
-      baseClass += " bg-gray-100"
+      baseClass += " bg-white"
     }
 
     if (data.isSelected && !isLoading) {
-      baseClass += " ring-2 ring-blue-700 shadow-lg scale-105"
+      baseClass += " ring-2 ring-slate-600 shadow-lg scale-105 border-slate-600"
     } else if (data.isConnected && !isLoading) {
-      baseClass += " ring-2 ring-blue-300 shadow-lg"
+      baseClass += " ring-2 ring-slate-400 shadow-md border-slate-400"
     } else if (data.isDimmed) {
       baseClass += " opacity-40"
     }
@@ -113,15 +113,15 @@ const CustomNode = ({ data, id }: NodeProps<CustomNodeType>) => {
 
   return (
     <Card className={getCardClassName()} onClick={handleClick}>
-      <Handle type="target" position={Position.Left} className="!bg-gray-400 w-2 h-2" />
-      <Handle type="source" position={Position.Right} className="!bg-gray-400 w-2 h-2" />
-      <Handle type="source" position={Position.Top} className="!bg-gray-400 w-2 h-2" />
-      <Handle type="source" position={Position.Bottom} className="!bg-gray-400 w-2 h-2" />
-      <CardHeader className="p-2">
-        <CardTitle className="text-xs font-bold whitespace-nowrap text-center">{data.title}</CardTitle>
-        <p className="text-[10px] text-muted-foreground text-center">{data.subtext}</p>
+      <Handle type="target" position={Position.Left} className="!bg-slate-400 w-2 h-2" />
+      <Handle type="source" position={Position.Right} className="!bg-slate-400 w-2 h-2" />
+      <Handle type="source" position={Position.Top} className="!bg-slate-400 w-2 h-2" />
+      <Handle type="source" position={Position.Bottom} className="!bg-slate-400 w-2 h-2" />
+      <CardHeader className="p-3">
+        <CardTitle className="text-xs font-bold whitespace-nowrap text-center text-slate-900">{data.title}</CardTitle>
+        <p className="text-[10px] text-slate-600 text-center font-medium">{data.subtext}</p>
       </CardHeader>
-      <CardContent className="p-2 pt-0">
+      <CardContent className="p-3 pt-0">
         <div className="flex space-x-1 transition-all duration-200">
           {inDefaultMode && (
             <>
@@ -129,8 +129,8 @@ const CustomNode = ({ data, id }: NodeProps<CustomNodeType>) => {
                 isLoading={isFetching}
                 loadingText="..."
                 variant="outline"
-                className={`h-6 px-2 text-[10px] shadow-sm text-white ${
-                  isError ? "bg-gray-400" : trafficStatusColorClass
+                className={`h-6 px-2 text-[10px] shadow-sm text-white border-0 font-medium ${
+                  isError ? "bg-slate-400" : trafficStatusColorClass
                 }`}
               >
                 Flow
@@ -139,7 +139,7 @@ const CustomNode = ({ data, id }: NodeProps<CustomNodeType>) => {
                 isLoading={isFetching}
                 loadingText="..."
                 variant="outline"
-                className={`h-6 px-2 text-[10px] shadow-sm text-white ${isError ? "bg-gray-400" : trendColorClass}`}
+                className={`h-6 px-2 text-[10px] shadow-sm text-white border-0 font-medium ${isError ? "bg-slate-400" : trendColorClass}`}
               >
                 Trend
               </LoadingButton>
@@ -147,7 +147,7 @@ const CustomNode = ({ data, id }: NodeProps<CustomNodeType>) => {
                 isLoading={isFetching}
                 loadingText="..."
                 variant="outline"
-                className="h-6 px-2 text-[10px] shadow-sm bg-transparent"
+                className="h-6 px-2 text-[10px] shadow-sm bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 font-medium"
               >
                 Balanced
               </LoadingButton>
@@ -160,7 +160,7 @@ const CustomNode = ({ data, id }: NodeProps<CustomNodeType>) => {
                 isLoading={true}
                 loadingText="..."
                 variant="outline"
-                className="h-6 px-2 text-[10px] shadow-sm bg-blue-600 text-white hover:bg-blue-700 hover:text-white border-blue-600"
+                className="h-6 px-2 text-[10px] shadow-sm bg-slate-600 text-white hover:bg-slate-700 hover:text-white border-slate-600 font-medium"
               >
                 Summary
               </LoadingButton>
@@ -168,7 +168,7 @@ const CustomNode = ({ data, id }: NodeProps<CustomNodeType>) => {
                 isLoading={true}
                 loadingText="..."
                 variant="outline"
-                className="h-6 px-2 text-[10px] shadow-sm bg-blue-600 text-white hover:bg-blue-700 hover:text-white border-blue-600"
+                className="h-6 px-2 text-[10px] shadow-sm bg-slate-600 text-white hover:bg-slate-700 hover:text-white border-slate-600 font-medium"
               >
                 Details
               </LoadingButton>
@@ -181,7 +181,7 @@ const CustomNode = ({ data, id }: NodeProps<CustomNodeType>) => {
                 isLoading={false}
                 loadingText="..."
                 variant="outline"
-                className="h-6 px-2 text-[10px] shadow-sm bg-blue-600 text-white hover:bg-blue-700 hover:text-white border-blue-600"
+                className="h-6 px-2 text-[10px] shadow-sm bg-slate-600 text-white hover:bg-slate-700 hover:text-white border-slate-600 font-medium"
               >
                 Summary
               </LoadingButton>
@@ -189,7 +189,7 @@ const CustomNode = ({ data, id }: NodeProps<CustomNodeType>) => {
                 isLoading={false}
                 loadingText="..."
                 variant="outline"
-                className="h-6 px-2 text-[10px] shadow-sm bg-blue-600 text-white hover:bg-blue-700 hover:text-white border-blue-600"
+                className="h-6 px-2 text-[10px] shadow-sm bg-slate-600 text-white hover:bg-slate-700 hover:text-white border-slate-600 font-medium"
                 onClick={handleDetailsClick}
               >
                 Details

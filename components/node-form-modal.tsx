@@ -64,45 +64,58 @@ export function NodeFormModal({ isOpen, onClose, onSubmit, node, backgroundNodes
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{node ? "Edit Node" : "Create New Node"}</DialogTitle>
+      <DialogContent className="sm:max-w-[500px] border-slate-200 shadow-lg">
+        <DialogHeader className="pb-4">
+          <DialogTitle className="text-xl font-semibold text-slate-900">
+            {node ? "Edit Node" : "Create New Node"}
+          </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="label">Label</Label>
+            <Label htmlFor="label" className="text-sm font-medium text-slate-700">
+              Label
+            </Label>
             <Input
               id="label"
               value={formData.label}
               onChange={(e) => setFormData({ ...formData, label: e.target.value })}
               placeholder="e.g., Swift Gateway"
+              className="border-slate-300 focus:border-slate-500 focus:ring-slate-500"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="title">Title (Optional)</Label>
+            <Label htmlFor="title" className="text-sm font-medium text-slate-700">
+              Title (Optional)
+            </Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               placeholder="e.g., GPP (UI)"
+              className="border-slate-300 focus:border-slate-500 focus:ring-slate-500"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="subtext">Subtext (Optional)</Label>
+            <Label htmlFor="subtext" className="text-sm font-medium text-slate-700">
+              Subtext (Optional)
+            </Label>
             <Input
               id="subtext"
               value={formData.subtext}
               onChange={(e) => setFormData({ ...formData, subtext: e.target.value })}
               placeholder="e.g., Global PayPlus"
+              className="border-slate-300 focus:border-slate-500 focus:ring-slate-500"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="class">Classification</Label>
+            <Label htmlFor="class" className="text-sm font-medium text-slate-700">
+              Classification
+            </Label>
             <Select value={formData.class} onValueChange={(value) => setFormData({ ...formData, class: value })}>
-              <SelectTrigger>
+              <SelectTrigger className="border-slate-300 focus:border-slate-500 focus:ring-slate-500">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -118,9 +131,11 @@ export function NodeFormModal({ isOpen, onClose, onSubmit, node, backgroundNodes
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="parentId">Parent Group (Optional)</Label>
+            <Label htmlFor="parentId" className="text-sm font-medium text-slate-700">
+              Parent Group (Optional)
+            </Label>
             <Select value={formData.parentId} onValueChange={(value) => setFormData({ ...formData, parentId: value })}>
-              <SelectTrigger>
+              <SelectTrigger className="border-slate-300 focus:border-slate-500 focus:ring-slate-500">
                 <SelectValue placeholder="Select parent group" />
               </SelectTrigger>
               <SelectContent>
@@ -134,11 +149,16 @@ export function NodeFormModal({ isOpen, onClose, onSubmit, node, backgroundNodes
             </Select>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="flex justify-end space-x-3 pt-6 border-t border-slate-200">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="border-slate-300 text-slate-700 hover:bg-slate-50 bg-transparent"
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading} className="bg-slate-700 hover:bg-slate-800">
               {isLoading ? "Saving..." : node ? "Update" : "Create"}
             </Button>
           </div>
