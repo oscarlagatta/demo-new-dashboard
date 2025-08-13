@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Trash2, Edit, Plus, ArrowLeft, Home, LinkIcon } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Trash2, Edit, Plus, ArrowLeft, Home, LinkIcon, Search, X } from "lucide-react"
 import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -21,9 +22,17 @@ import { ConfirmationDialog } from "@/components/confirmation-dialog"
 import { useToast } from "@/hooks/use-toast"
 
 export default function NodeManagerPage() {
+  const { data: flowData, isLoading, error } = useFlowData()
+  const createNodeMutation = useCreateNode()
+  const updateNodeMutation = useUpdateNode()
+  const deleteNodeMutation = useDeleteNode()
+  const createEdgeMutation = useCreateEdge()
+  const deleteEdgeMutation = useDeleteEdge()
+
   const [isNodeModalOpen, setIsNodeModalOpen] = useState(false)
   const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false)
   const [editingNode, setEditingNode] = useState(null)
+  const [searchQuery, setSearchQuery] = useState("")
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     title: "",
@@ -32,12 +41,46 @@ export default function NodeManagerPage() {
   })
   const { toast } = useToast()
 
-  const { data: flowData, isLoading, error } = useFlowData()
-  const createNodeMutation = useCreateNode()
-  const updateNodeMutation = useUpdateNode()
-  const deleteNodeMutation = useDeleteNode()
-  const createEdgeMutation = useCreateEdge()
-  const deleteEdgeMutation = useDeleteEdge()
+  const nodes = useMemo(() => flowData?.nodes?.filter((node) => node.type !== "background") || [], [flowData])
+  const edges = useMemo(() => flowData?.edges || [], [flowData])
+  const backgroundNodes = useMemo(() => flowData?.nodes?.filter((node) => node.type === "background") || [], [flowData])
+
+  const filteredNodes = useMemo(() => {
+    if (!searchQuery.trim()) return nodes
+
+    const query = searchQuery.toLowerCase()
+    return nodes.filter((node) => {
+      const displayName = getNodeDisplayName(node).toLowerCase()
+      const subtext = (node.subtext || "").toLowerCase()
+      const nodeClass = (node.class || "").toLowerCase()
+      const nodeId = node.id.toLowerCase()
+
+      return (
+        displayName.includes(query) || subtext.includes(query) || nodeClass.includes(query) || nodeId.includes(query)
+      )
+    })
+  }, [nodes, searchQuery])
+
+  const filteredEdges = useMemo(() => {
+    if (!searchQuery.trim()) return edges
+
+    const query = searchQuery.toLowerCase()
+    return edges.filter((edge) => {
+      const sourceNode = nodes.find((n) => n.id === edge.source)
+      const targetNodes = Array.isArray(edge.target)
+        ? edge.target.map((id) => nodes.find((n) => n.id === id)).filter(Boolean)
+        : [nodes.find((n) => n.id === edge.target)].filter(Boolean)
+
+      const sourceName = getNodeDisplayName(sourceNode).toLowerCase()
+      const targetNames = targetNodes.map((node) => getNodeDisplayName(node).toLowerCase()).join(" ")
+      const edgeType = (edge.type || "").toLowerCase()
+      const edgeId = edge.id.toLowerCase()
+
+      return (
+        sourceName.includes(query) || targetNames.includes(query) || edgeType.includes(query) || edgeId.includes(query)
+      )
+    })
+  }, [edges, nodes, searchQuery])
 
   if (isLoading) {
     return (
@@ -62,10 +105,6 @@ export default function NodeManagerPage() {
       </div>
     )
   }
-
-  const nodes = flowData?.nodes?.filter((node) => node.type !== "background") || []
-  const edges = flowData?.edges || []
-  const backgroundNodes = flowData?.nodes?.filter((node) => node.type === "background") || []
 
   const handleCreateNode = () => {
     setEditingNode(null)
@@ -206,6 +245,10 @@ export default function NodeManagerPage() {
     ).length
   }
 
+  const clearSearch = () => {
+    setSearchQuery("")
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-4 sm:py-5 shadow-sm">
@@ -238,6 +281,41 @@ export default function NodeManagerPage() {
       </div>
 
       <div className="container mx-auto p-4 sm:p-6 max-w-7xl">
+        <div className="mb-6 lg:mb-8">
+          <div className="relative max-w-2xl mx-auto">
+            <div className="relative group">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-slate-600 transition-colors duration-200" />
+              <Input
+                type="text"
+                placeholder="Search nodes and connections by name, type, or classification..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 pr-12 py-3 text-base border-slate-300 bg-white shadow-sm hover:shadow-md focus:shadow-md focus:border-slate-400 focus:ring-2 focus:ring-slate-200 transition-all duration-200 placeholder:text-slate-400"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSearch}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors duration-200"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            {searchQuery && (
+              <div className="mt-2 text-sm text-slate-600 font-medium animate-in fade-in-0 duration-200">
+                <span className="hidden sm:inline">
+                  Found {filteredNodes.length} nodes and {filteredEdges.length} connections
+                </span>
+                <span className="sm:hidden">
+                  {filteredNodes.length} nodes, {filteredEdges.length} connections
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-0 mb-6 lg:mb-8">
           <div className="w-full lg:w-auto">
             <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
@@ -311,21 +389,23 @@ export default function NodeManagerPage() {
               value="nodes"
               className="data-[state=active]:bg-white data-[state=active]:text-slate-900 text-sm sm:text-base"
             >
-              <span className="hidden sm:inline">Nodes ({nodes.length})</span>
+              <span className="hidden sm:inline">Nodes ({searchQuery ? filteredNodes.length : nodes.length})</span>
               <span className="sm:hidden">Nodes</span>
             </TabsTrigger>
             <TabsTrigger
               value="connections"
               className="data-[state=active]:bg-white data-[state=active]:text-slate-900 text-sm sm:text-base"
             >
-              <span className="hidden sm:inline">Connections ({edges.length})</span>
+              <span className="hidden sm:inline">
+                Connections ({searchQuery ? filteredEdges.length : edges.length})
+              </span>
               <span className="sm:hidden">Connections</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="nodes" className="space-y-6 mt-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5 lg:gap-6">
-              {nodes.map((node) => {
+              {filteredNodes.map((node) => {
                 const status = getNodeStatus(node)
                 const connections = getNodeConnections(node.id)
 
@@ -388,11 +468,18 @@ export default function NodeManagerPage() {
                 )
               })}
             </div>
+            {searchQuery && filteredNodes.length === 0 && (
+              <div className="text-center py-12">
+                <Search className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-slate-900 mb-2">No nodes found</h3>
+                <p className="text-slate-500">Try adjusting your search terms or clear the search to see all nodes.</p>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="connections" className="space-y-4 mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-              {edges.map((edge) => {
+              {filteredEdges.map((edge) => {
                 const sourceNode = nodes.find((n) => n.id === edge.source)
                 const targetNodes = Array.isArray(edge.target)
                   ? edge.target.map((id) => nodes.find((n) => n.id === id)).filter(Boolean)
@@ -431,6 +518,15 @@ export default function NodeManagerPage() {
                 )
               })}
             </div>
+            {searchQuery && filteredEdges.length === 0 && (
+              <div className="text-center py-12">
+                <Search className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-slate-900 mb-2">No connections found</h3>
+                <p className="text-slate-500">
+                  Try adjusting your search terms or clear the search to see all connections.
+                </p>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 
