@@ -1,15 +1,11 @@
 "use client"
 
-import { useMemo, useState, useCallback } from "react"
+import { useMemo, useState } from "react"
 import { ArrowLeft, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { AgGridReact } from "ag-grid-react"
-import type { ColDef, GridReadyEvent } from "ag-grid-community"
-import "ag-grid-community/styles/ag-grid.css"
-import "ag-grid-community/styles/ag-theme-alpine.css"
 import { useTransactionSearchContext } from "./transaction-search-provider"
 
 export function TransactionDetailsTable() {
@@ -134,36 +130,12 @@ export function TransactionDetailsTable() {
     return { tableData, columns: sortedColumns }
   }, [results, selectedAitId])
 
-  const agGridColumnDefs = useMemo<ColDef[]>(() => {
-    return columns.map((column) => ({
-      field: column,
-      headerName: formatColumnName(column),
-      sortable: true,
-      filter: true,
-      resizable: true,
-      minWidth: 150,
-      cellRenderer: (params: any) => {
-        const formatted = formatCellValue(params.value, column)
-        if (typeof formatted === "object" && formatted.props) {
-          // Handle React elements (like the dash for empty values)
-          return formatted.props.children || "—"
-        }
-        return formatted
-      },
-      headerTooltip: formatColumnName(column),
-    }))
-  }, [columns])
-
   // Pagination calculations for Shadcn table
   const totalItems = tableData.length
   const totalPages = Math.ceil(totalItems / pageSize)
   const startIndex = (currentPage - 1) * pageSize
   const endIndex = Math.min(startIndex + pageSize, totalItems)
   const paginatedData = tableData.slice(startIndex, endIndex)
-
-  const onGridReady = useCallback((params: GridReadyEvent) => {
-    params.api.sizeColumnsToFit()
-  }, [])
 
   return (
     <TooltipProvider>
@@ -308,39 +280,6 @@ export function TransactionDetailsTable() {
                   </Button>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="w-full p-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">ag-Grid Table</h2>
-            <p className="text-sm text-gray-600">Same data displayed using ag-Grid React</p>
-          </div>
-
-          <div className="border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-            <div className="ag-theme-alpine" style={{ height: "500px", width: "100%" }}>
-              <AgGridReact
-                rowData={tableData}
-                columnDefs={agGridColumnDefs}
-                defaultColDef={{
-                  sortable: true,
-                  filter: true,
-                  resizable: true,
-                  minWidth: 150,
-                }}
-                pagination={true}
-                paginationPageSize={25}
-                paginationPageSizeSelector={[10, 25, 50, 100]}
-                rowSelection="multiple"
-                onGridReady={onGridReady}
-                animateRows={true}
-                rowHeight={40}
-                headerHeight={45}
-                suppressRowClickSelection={true}
-                enableCellTextSelection={true}
-                ensureDomOrder={true}
-              />
             </div>
           </div>
         </div>
