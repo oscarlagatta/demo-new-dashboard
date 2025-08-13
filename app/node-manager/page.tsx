@@ -21,6 +21,11 @@ import { ConnectionFormModal } from "@/components/connection-form-modal"
 import { ConfirmationDialog } from "@/components/confirmation-dialog"
 import { useToast } from "@/hooks/use-toast"
 
+const getNodeDisplayName = (node) => {
+  if (!node) return "Unknown Node"
+  return node.data?.label || node.title || node.label || `Node ${node.id}`
+}
+
 export default function NodeManagerPage() {
   const { data: flowData, isLoading, error } = useFlowData()
   const createNodeMutation = useCreateNode()
@@ -230,10 +235,6 @@ export default function NodeManagerPage() {
       default:
         return "bg-gray-50 text-gray-600 border border-gray-300"
     }
-  }
-
-  const getNodeDisplayName = (node) => {
-    return node.data?.label || node.title || node.label || `Node ${node.id}`
   }
 
   const getNodeConnections = (nodeId) => {
