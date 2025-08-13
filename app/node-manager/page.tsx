@@ -17,12 +17,19 @@ import {
 } from "@/hooks/use-node-api"
 import { NodeFormModal } from "@/components/node-form-modal"
 import { ConnectionFormModal } from "@/components/connection-form-modal"
+import { ConfirmationDialog } from "@/components/confirmation-dialog"
 import { useToast } from "@/hooks/use-toast"
 
 export default function NodeManagerPage() {
   const [isNodeModalOpen, setIsNodeModalOpen] = useState(false)
   const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false)
   const [editingNode, setEditingNode] = useState(null)
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: "",
+    description: "",
+    onConfirm: () => {},
+  })
   const { toast } = useToast()
 
   const { data: flowData, isLoading, error } = useFlowData()
@@ -90,12 +97,23 @@ export default function NodeManagerPage() {
   }
 
   const handleDeleteNode = async (nodeId) => {
-    try {
-      await deleteNodeMutation.mutateAsync(nodeId)
-      toast({ title: "Node deleted successfully" })
-    } catch (error) {
-      toast({ title: "Error deleting node", variant: "destructive" })
-    }
+    const node = nodes.find((n) => n.id === nodeId)
+    const nodeName = getNodeDisplayName(node)
+
+    setConfirmDialog({
+      isOpen: true,
+      title: "Delete Node",
+      description: `Are you sure you want to delete "${nodeName}"? This action cannot be undone and will remove all associated connections.`,
+      onConfirm: async () => {
+        try {
+          await deleteNodeMutation.mutateAsync(nodeId)
+          toast({ title: "Node deleted successfully" })
+        } catch (error) {
+          toast({ title: "Error deleting node", variant: "destructive" })
+        }
+        setConfirmDialog({ ...confirmDialog, isOpen: false })
+      },
+    })
   }
 
   const handleCreateConnection = async (connectionData) => {
@@ -115,12 +133,28 @@ export default function NodeManagerPage() {
   }
 
   const handleDeleteConnection = async (edgeId) => {
-    try {
-      await deleteEdgeMutation.mutateAsync(edgeId)
-      toast({ title: "Connection deleted successfully" })
-    } catch (error) {
-      toast({ title: "Error deleting connection", variant: "destructive" })
-    }
+    const edge = edges.find((e) => e.id === edgeId)
+    const sourceNode = nodes.find((n) => n.id === edge?.source)
+    const targetNodes = Array.isArray(edge?.target)
+      ? edge.target.map((id) => nodes.find((n) => n.id === id)).filter(Boolean)
+      : [nodes.find((n) => n.id === edge?.target)].filter(Boolean)
+
+    const connectionDescription = `${getNodeDisplayName(sourceNode)} → ${targetNodes.map((node) => getNodeDisplayName(node)).join(", ")}`
+
+    setConfirmDialog({
+      isOpen: true,
+      title: "Delete Connection",
+      description: `Are you sure you want to delete the connection "${connectionDescription}"? This action cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          await deleteEdgeMutation.mutateAsync(edgeId)
+          toast({ title: "Connection deleted successfully" })
+        } catch (error) {
+          toast({ title: "Error deleting connection", variant: "destructive" })
+        }
+        setConfirmDialog({ ...confirmDialog, isOpen: false })
+      },
+    })
   }
 
   const getNodeStatus = (node) => {
@@ -221,25 +255,25 @@ export default function NodeManagerPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 shadow-md">
             <CardContent className="p-6">
               <div className="text-2xl font-bold text-emerald-700">{activeNodes}</div>
               <div className="text-sm text-slate-600 font-medium mt-1">Active Nodes</div>
             </CardContent>
           </Card>
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 shadow-md">
             <CardContent className="p-6">
               <div className="text-2xl font-bold text-slate-600">{inactiveNodes}</div>
               <div className="text-sm text-slate-600 font-medium mt-1">Inactive Nodes</div>
             </CardContent>
           </Card>
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 shadow-md">
             <CardContent className="p-6">
               <div className="text-2xl font-bold text-blue-700">{totalConnections}</div>
               <div className="text-sm text-slate-600 font-medium mt-1">Total Connections</div>
             </CardContent>
           </Card>
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 shadow-md">
             <CardContent className="p-6">
               <div className="text-2xl font-bold text-indigo-700">{backgroundNodes.length}</div>
               <div className="text-sm text-slate-600 font-medium mt-1">Background Groups</div>
@@ -267,7 +301,10 @@ export default function NodeManagerPage() {
                 const connections = getNodeConnections(node.id)
 
                 return (
-                  <Card key={node.id} className="hover:shadow-md transition-all duration-200 border-slate-200 bg-white">
+                  <Card
+                    key={node.id}
+                    className="shadow-md hover:shadow-lg transition-all duration-200 border-slate-200 bg-white"
+                  >
                     <CardHeader className="pb-4">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
@@ -329,7 +366,7 @@ export default function NodeManagerPage() {
                   : [nodes.find((n) => n.id === edge.target)].filter(Boolean)
 
                 return (
-                  <Card key={edge.id} className="hover:shadow-sm transition-shadow border-slate-200 bg-white">
+                  <Card key={edge.id} className="shadow-md hover:shadow-lg transition-shadow border-slate-200 bg-white">
                     <CardContent className="p-5">
                       <div className="flex justify-between items-center">
                         <div className="flex-1">
@@ -377,6 +414,17 @@ export default function NodeManagerPage() {
           nodes={nodes}
           existingEdges={edges}
           isLoading={createEdgeMutation.isPending}
+        />
+
+        <ConfirmationDialog
+          isOpen={confirmDialog.isOpen}
+          onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+          onConfirm={confirmDialog.onConfirm}
+          title={confirmDialog.title}
+          description={confirmDialog.description}
+          confirmText="Delete"
+          cancelText="Cancel"
+          isDestructive={true}
         />
       </div>
     </div>
