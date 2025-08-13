@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Trash2, Edit, Plus, ArrowLeft, Home, LinkIcon, Search, X } from "lucide-react"
+import { Trash2, Edit, Plus, ArrowLeft, Home, LinkIcon, Search, X, History } from "lucide-react"
 import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -19,6 +19,7 @@ import {
 import { NodeFormModal } from "@/components/node-form-modal"
 import { ConnectionFormModal } from "@/components/connection-form-modal"
 import { ConfirmationDialog } from "@/components/confirmation-dialog"
+import { VersionHistoryModal } from "@/components/version-history-modal"
 import { useToast } from "@/hooks/use-toast"
 
 const getNodeDisplayName = (node) => {
@@ -43,6 +44,11 @@ export default function NodeManagerPage() {
     title: "",
     description: "",
     onConfirm: () => {},
+  })
+  const [versionHistoryModal, setVersionHistoryModal] = useState({
+    isOpen: false,
+    systemName: "",
+    systemId: "",
   })
   const { toast } = useToast()
 
@@ -199,6 +205,25 @@ export default function NodeManagerPage() {
         setConfirmDialog({ ...confirmDialog, isOpen: false })
       },
     })
+  }
+
+  const handleViewVersionHistory = (node) => {
+    setVersionHistoryModal({
+      isOpen: true,
+      systemName: getNodeDisplayName(node),
+      systemId: node.id,
+    })
+  }
+
+  const handleRevertVersion = async (versionId) => {
+    try {
+      // In a real app, this would call an API to revert the system
+      console.log(`Reverting to version: ${versionId}`)
+      toast({ title: "System reverted successfully" })
+    } catch (error) {
+      toast({ title: "Error reverting system", variant: "destructive" })
+      throw error
+    }
   }
 
   const getNodeStatus = (node) => {
@@ -429,6 +454,15 @@ export default function NodeManagerPage() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            onClick={() => handleViewVersionHistory(node)}
+                            className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-slate-500 hover:text-blue-700 hover:bg-blue-50"
+                            title="View Version History"
+                          >
+                            <History className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => handleEditNode(node)}
                             className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-slate-500 hover:text-blue-700 hover:bg-blue-50"
                           >
@@ -462,6 +496,17 @@ export default function NodeManagerPage() {
                               Parent: {backgroundNodes.find((bg) => bg.id === node.parentId)?.label || node.parentId}
                             </div>
                           )}
+                        </div>
+                        <div className="pt-2 border-t border-slate-100">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewVersionHistory(node)}
+                            className="w-full text-xs text-slate-600 hover:text-blue-700 hover:bg-blue-50 h-7 justify-center"
+                          >
+                            <History className="h-3 w-3 mr-1" />
+                            Version History
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
@@ -561,6 +606,15 @@ export default function NodeManagerPage() {
           confirmText="Delete"
           cancelText="Cancel"
           isDestructive={true}
+        />
+
+        <VersionHistoryModal
+          isOpen={versionHistoryModal.isOpen}
+          onClose={() => setVersionHistoryModal({ isOpen: false, systemName: "", systemId: "" })}
+          systemName={versionHistoryModal.systemName}
+          systemId={versionHistoryModal.systemId}
+          onRevert={handleRevertVersion}
+          isLoading={false}
         />
       </div>
     </div>
