@@ -295,7 +295,7 @@ export default function NodeManagerPage() {
           </TabsList>
 
           <TabsContent value="nodes" className="space-y-6 mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {nodes.map((node) => {
                 const status = getNodeStatus(node)
                 const connections = getNodeConnections(node.id)
@@ -358,7 +358,7 @@ export default function NodeManagerPage() {
           </TabsContent>
 
           <TabsContent value="connections" className="space-y-4 mt-6">
-            <div className="grid gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {edges.map((edge) => {
                 const sourceNode = nodes.find((n) => n.id === edge.source)
                 const targetNodes = Array.isArray(edge.target)
