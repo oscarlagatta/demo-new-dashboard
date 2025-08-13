@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import apiData from "@/lib/api-data.json"
 
 // Types based on the actual API data structure
 export interface FlowNode {
@@ -26,9 +27,9 @@ export interface FlowDiagramData {
 
 // Mock API functions
 const fetchFlowData = async (): Promise<FlowDiagramData> => {
-  // Simulate API call
-  const response = await fetch("/lib/api-data.json")
-  return response.json()
+  // Simulate API delay
+  await new Promise((resolve) => setTimeout(resolve, 100))
+  return apiData as FlowDiagramData
 }
 
 const saveNode = async (node: FlowNode): Promise<FlowNode> => {
