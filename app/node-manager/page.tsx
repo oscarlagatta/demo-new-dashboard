@@ -208,23 +208,27 @@ export default function NodeManagerPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="bg-white border-b border-slate-200 px-6 py-5 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-6">
+      <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-4 sm:py-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-6 w-full sm:w-auto">
             <Link href="/">
               <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
+                <span className="hidden sm:inline">Back to Dashboard</span>
+                <span className="sm:hidden">Back</span>
               </Button>
             </Link>
-            <div className="h-6 w-px bg-slate-300" />
-            <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Node Management System</h1>
+            <div className="hidden sm:block h-6 w-px bg-slate-300" />
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold text-slate-900 tracking-tight">
+              <span className="hidden md:inline">Node Management System</span>
+              <span className="md:hidden">Node Manager</span>
+            </h1>
           </div>
-          <Link href="/">
+          <Link href="/" className="w-full sm:w-auto">
             <Button
               variant="outline"
               size="sm"
-              className="border-slate-300 text-slate-600 hover:bg-slate-50 bg-transparent"
+              className="border-slate-300 text-slate-600 hover:bg-slate-50 bg-transparent w-full sm:w-auto"
             >
               <Home className="w-4 h-4 mr-2" />
               Dashboard
@@ -233,69 +237,94 @@ export default function NodeManagerPage() {
         </div>
       </div>
 
-      <div className="container mx-auto p-6 max-w-7xl">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <p className="text-slate-600 font-medium">Manage payment processing system nodes and their connections</p>
+      <div className="container mx-auto p-4 sm:p-6 max-w-7xl">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-0 mb-6 lg:mb-8">
+          <div className="w-full lg:w-auto">
+            <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
+              <span className="hidden sm:inline">Manage payment processing system nodes and their connections</span>
+              <span className="sm:hidden">Manage nodes and connections</span>
+            </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
             <Button
               onClick={() => setIsConnectionModalOpen(true)}
               variant="outline"
-              className="flex items-center gap-2 border-slate-300 text-slate-700 hover:bg-slate-50"
+              className="flex items-center justify-center gap-2 border-slate-300 text-slate-700 hover:bg-slate-50 w-full sm:w-auto px-4 py-2 text-sm sm:text-base"
             >
               <LinkIcon className="h-4 w-4" />
-              Create Connection
+              <span className="hidden sm:inline">Create Connection</span>
+              <span className="sm:hidden">Connection</span>
             </Button>
-            <Button onClick={handleCreateNode} className="flex items-center gap-2 bg-slate-700 hover:bg-slate-800">
+            <Button
+              onClick={handleCreateNode}
+              className="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-800 w-full sm:w-auto px-4 py-2 text-sm sm:text-base"
+            >
               <Plus className="h-4 w-4" />
-              Create Node
+              <span className="hidden sm:inline">Create Node</span>
+              <span className="sm:hidden">Node</span>
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 lg:mb-8">
           <Card className="border-slate-200 shadow-md">
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold text-emerald-700">{activeNodes}</div>
-              <div className="text-sm text-slate-600 font-medium mt-1">Active Nodes</div>
+            <CardContent className="p-3 sm:p-4 lg:p-6">
+              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-emerald-700">{activeNodes}</div>
+              <div className="text-xs sm:text-sm text-slate-600 font-medium mt-1">
+                <span className="hidden sm:inline">Active Nodes</span>
+                <span className="sm:hidden">Active</span>
+              </div>
             </CardContent>
           </Card>
           <Card className="border-slate-200 shadow-md">
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold text-slate-600">{inactiveNodes}</div>
-              <div className="text-sm text-slate-600 font-medium mt-1">Inactive Nodes</div>
+            <CardContent className="p-3 sm:p-4 lg:p-6">
+              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-600">{inactiveNodes}</div>
+              <div className="text-xs sm:text-sm text-slate-600 font-medium mt-1">
+                <span className="hidden sm:inline">Inactive Nodes</span>
+                <span className="sm:hidden">Inactive</span>
+              </div>
             </CardContent>
           </Card>
           <Card className="border-slate-200 shadow-md">
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold text-blue-700">{totalConnections}</div>
-              <div className="text-sm text-slate-600 font-medium mt-1">Total Connections</div>
+            <CardContent className="p-3 sm:p-4 lg:p-6">
+              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-700">{totalConnections}</div>
+              <div className="text-xs sm:text-sm text-slate-600 font-medium mt-1">
+                <span className="hidden sm:inline">Total Connections</span>
+                <span className="sm:hidden">Connections</span>
+              </div>
             </CardContent>
           </Card>
           <Card className="border-slate-200 shadow-md">
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold text-indigo-700">{backgroundNodes.length}</div>
-              <div className="text-sm text-slate-600 font-medium mt-1">Background Groups</div>
+            <CardContent className="p-3 sm:p-4 lg:p-6">
+              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-indigo-700">{backgroundNodes.length}</div>
+              <div className="text-xs sm:text-sm text-slate-600 font-medium mt-1">
+                <span className="hidden sm:inline">Background Groups</span>
+                <span className="sm:hidden">Groups</span>
+              </div>
             </CardContent>
           </Card>
         </div>
 
         <Tabs defaultValue="nodes" className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-slate-100 border border-slate-200">
-            <TabsTrigger value="nodes" className="data-[state=active]:bg-white data-[state=active]:text-slate-900">
-              Nodes ({nodes.length})
+            <TabsTrigger
+              value="nodes"
+              className="data-[state=active]:bg-white data-[state=active]:text-slate-900 text-sm sm:text-base"
+            >
+              <span className="hidden sm:inline">Nodes ({nodes.length})</span>
+              <span className="sm:hidden">Nodes</span>
             </TabsTrigger>
             <TabsTrigger
               value="connections"
-              className="data-[state=active]:bg-white data-[state=active]:text-slate-900"
+              className="data-[state=active]:bg-white data-[state=active]:text-slate-900 text-sm sm:text-base"
             >
-              Connections ({edges.length})
+              <span className="hidden sm:inline">Connections ({edges.length})</span>
+              <span className="sm:hidden">Connections</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="nodes" className="space-y-6 mt-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5 lg:gap-6">
               {nodes.map((node) => {
                 const status = getNodeStatus(node)
                 const connections = getNodeConnections(node.id)
@@ -305,46 +334,50 @@ export default function NodeManagerPage() {
                     key={node.id}
                     className="shadow-md hover:shadow-lg transition-all duration-200 border-slate-200 bg-white"
                   >
-                    <CardHeader className="pb-4">
+                    <CardHeader className="pb-3 sm:pb-4">
                       <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg font-semibold text-slate-900">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base sm:text-lg font-semibold text-slate-900 truncate">
                             {getNodeDisplayName(node)}
                           </CardTitle>
-                          <CardDescription className="text-sm text-slate-500 mt-1">
+                          <CardDescription className="text-xs sm:text-sm text-slate-500 mt-1 truncate">
                             {node.subtext || `ID: ${node.id}`}
                           </CardDescription>
                         </div>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 ml-2">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEditNode(node)}
-                            className="h-8 w-8 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                            className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteNode(node.id)}
-                            className="h-8 w-8 p-0 text-slate-500 hover:text-red-600 hover:bg-red-50"
+                            className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-slate-500 hover:text-red-600 hover:bg-red-50"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent className="pt-0">
-                      <div className="space-y-4">
-                        <div className="flex flex-wrap gap-2">
-                          <Badge className={getStatusColor(status)}>{status}</Badge>
-                          {node.class && <Badge className={getClassificationColor(node.class)}>{node.class}</Badge>}
+                      <div className="space-y-3 sm:space-y-4">
+                        <div className="flex flex-wrap gap-1 sm:gap-2">
+                          <Badge className={`${getStatusColor(status)} text-xs`}>{status}</Badge>
+                          {node.class && (
+                            <Badge className={`${getClassificationColor(node.class)} text-xs truncate max-w-full`}>
+                              {node.class}
+                            </Badge>
+                          )}
                         </div>
-                        <div className="text-sm text-slate-600 space-y-1">
+                        <div className="text-xs sm:text-sm text-slate-600 space-y-1">
                           <div className="font-medium">Connections: {connections}</div>
                           {node.parentId && (
-                            <div className="text-slate-500">
+                            <div className="text-slate-500 truncate">
                               Parent: {backgroundNodes.find((bg) => bg.id === node.parentId)?.label || node.parentId}
                             </div>
                           )}
@@ -358,7 +391,7 @@ export default function NodeManagerPage() {
           </TabsContent>
 
           <TabsContent value="connections" className="space-y-4 mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
               {edges.map((edge) => {
                 const sourceNode = nodes.find((n) => n.id === edge.source)
                 const targetNodes = Array.isArray(edge.target)
@@ -367,27 +400,30 @@ export default function NodeManagerPage() {
 
                 return (
                   <Card key={edge.id} className="shadow-md hover:shadow-lg transition-shadow border-slate-200 bg-white">
-                    <CardContent className="p-5">
-                      <div className="flex justify-between items-center">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 text-sm">
-                            <span className="font-semibold text-slate-900">{getNodeDisplayName(sourceNode)}</span>
-                            <span className="text-slate-400">→</span>
-                            <span className="font-semibold text-slate-900">
+                    <CardContent className="p-4 sm:p-5">
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+                            <span className="font-semibold text-slate-900 truncate">
+                              {getNodeDisplayName(sourceNode)}
+                            </span>
+                            <span className="text-slate-400 self-start sm:self-center">→</span>
+                            <span className="font-semibold text-slate-900 truncate">
                               {targetNodes.map((node) => getNodeDisplayName(node)).join(", ")}
                             </span>
                           </div>
                           <div className="text-xs text-slate-500 mt-2 font-medium">
-                            Type: {edge.type || "default"} • ID: {edge.id}
+                            <div className="truncate">Type: {edge.type || "default"}</div>
+                            <div className="truncate">ID: {edge.id}</div>
                           </div>
                         </div>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteConnection(edge.id)}
-                          className="h-8 w-8 p-0 text-slate-500 hover:text-red-600 hover:bg-red-50"
+                          className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-slate-500 hover:text-red-600 hover:bg-red-50 flex-shrink-0"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
                     </CardContent>
