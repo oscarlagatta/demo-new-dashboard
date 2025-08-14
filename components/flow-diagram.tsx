@@ -1,5 +1,5 @@
 "use client"
-import { useState, useCallback, useEffect, useMemo, useRef } from "react"
+import { useState, useCallback, useMemo } from "react"
 import {
   ReactFlow,
   Background,
@@ -9,11 +9,8 @@ import {
   applyEdgeChanges,
   type Node,
   type Edge,
-  type OnConnect,
-  MarkerType,
   ReactFlowProvider,
   type NodeTypes,
-  useStore,
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
 import { Loader2, RefreshCw, AlertCircle } from "lucide-react"
@@ -47,12 +44,6 @@ const Flow = () => {
   const [connectedNodeIds, setConnectedNodeIds] = useState<Set<string>>(new Set())
   const [connectedEdgeIds, setConnectedEdgeIds] = useState<Set<string>>(new Set())
   const [lastRefetch, setLastRefetch] = useState<Date | null>(null)
-
-  const previousDimensions = useRef({ width: 0, height: 0 })
-  const resizeTimeoutRef = useRef<NodeJS.Timeout>()
-
-  const width = useStore((state) => state.width)
-  const height = useStore((state) => state.height)
 
   const { data: splunkData, isLoading, isError, error, refetch, isFetching, isSuccess } = useGetSplunk()
 
@@ -116,151 +107,6 @@ const Flow = () => {
       .sort()
   }, [selectedNodeId, connectedNodeIds, nodes])
 
-  useEffect(() => {
-    // Suppress ResizeObserver loop errors globally
-    const originalError = console.error
-    console.error = (...args) => {
-      if (args[0] && typeof args[0] === "string" && args[0].includes("ResizeObserver loop")) {
-        return
-      }
-      originalError.apply(console, args)
-    }
-
-    // Handle window error events
-    const handleResizeObserverError = (e: ErrorEvent) => {
-      if (
-        e.message.includes("ResizeObserver loop") ||
-        e.message.includes("ResizeObserver loop completed with undelivered notifications")
-      ) {
-        e.preventDefault()
-        e.stopPropagation()
-        return false
-      }
-    }
-
-    // Handle unhandled promise rejections
-    const handleUnhandledRejection = (e: PromiseRejectionEvent) => {
-      if (e.reason && typeof e.reason === "string" && e.reason.includes("ResizeObserver loop")) {
-        e.preventDefault()
-        return false
-      }
-    }
-
-    window.addEventListener("error", handleResizeObserverError)
-    window.addEventListener("unhandledrejection", handleUnhandledRejection)
-
-    return () => {
-      console.error = originalError
-      window.removeEventListener("error", handleResizeObserverError)
-      window.removeEventListener("unhandledrejection", handleUnhandledRejection)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (width > 0 && height > 0) {
-      // Check if dimensions actually changed significantly
-      const dimensionChange =
-        Math.abs(width - previousDimensions.current.width) > 5 ||
-        Math.abs(height - previousDimensions.current.height) > 5
-
-      if (!dimensionChange) return
-
-      // Clear any existing timeout
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current)
-      }
-
-      // Debounce the resize calculation
-      resizeTimeoutRef.current = setTimeout(() => {
-        previousDimensions.current = { width, height }
-
-        setNodes((currentNodes) => {
-          const totalGapWidth = GAP_WIDTH * (SECTION_IDS.length - 1)
-          const availableWidth = width - totalGapWidth
-          let currentX = 0
-
-          const newNodes = [...currentNodes]
-          const sectionDimensions: Record<string, { x: number; width: number }> = {}
-
-          for (let i = 0; i < SECTION_IDS.length; i++) {
-            const sectionId = SECTION_IDS[i]
-            const nodeIndex = newNodes.findIndex((n) => n.id === sectionId)
-
-            if (nodeIndex !== -1) {
-              const sectionWidth = availableWidth * SECTION_WIDTH_PROPORTIONS[i]
-              sectionDimensions[sectionId] = { x: currentX, width: sectionWidth }
-
-              newNodes[nodeIndex] = {
-                ...newNodes[nodeIndex],
-                position: { x: currentX, y: 0 },
-                style: {
-                  ...newNodes[nodeIndex].style,
-                  width: `${sectionWidth}px`,
-                  height: `${height}px`,
-                },
-              }
-              currentX += sectionWidth + GAP_WIDTH
-            }
-          }
-
-          for (let i = 0; i < newNodes.length; i++) {
-            const node = newNodes[i]
-            if (node.parentId && sectionDimensions[node.parentId]) {
-              const parentDimensions = sectionDimensions[node.parentId]
-
-              const originalNode = initialNodes.find((n) => n.id === node.id)
-              const originalParent = initialNodes.find((n) => n.id === node.parentId)
-
-              if (originalNode && originalParent && originalParent.style?.width) {
-                const originalParentWidth = Number.parseFloat(originalParent.style.width as string)
-                const originalRelativeXOffset = originalNode.position.x - originalParent.position.x
-
-                const newAbsoluteX =
-                  parentDimensions.x + (originalRelativeXOffset / originalParentWidth) * parentDimensions.width
-
-                newNodes[i] = {
-                  ...node,
-                  position: {
-                    x: newAbsoluteX,
-                    y: node.position.y,
-                  },
-                }
-              }
-            }
-          }
-          return newNodes
-        })
-      }, 100) // 100ms debounce
-    }
-
-    return () => {
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current)
-      }
-    }
-  }, [width, height])
-
-  const onNodesChange = useCallback((changes) => setNodes((nds) => applyNodeChanges(changes, nds)), [setNodes])
-
-  const onEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), [setEdges])
-
-  const onConnect: OnConnect = useCallback(
-    (connection) =>
-      setEdges((eds) =>
-        addEdge(
-          {
-            ...connection,
-            type: "smoothstep",
-            markerStart: { type: MarkerType.ArrowClosed, color: "#6b7280" },
-            markerEnd: { type: MarkerType.ArrowClosed, color: "#6b7280" },
-            style: { strokeWidth: 2, stroke: "#6b7280" },
-          },
-          eds,
-        ),
-      ),
-    [setEdges],
-  )
-
   const nodesForFlow = useMemo(() => {
     const regularNodes = nodes.map((node) => {
       const isSelected = selectedNodeId === node.id
@@ -293,7 +139,7 @@ const Flow = () => {
       {
         id: "sanctions-group",
         type: "group" as const,
-        position: { x: 650, y: 150 }, // Static position in middleware section
+        position: { x: 650, y: 150 },
         data: {
           label: "Sanctions & Compliance",
           width: 480,
@@ -450,9 +296,22 @@ const Flow = () => {
       <ReactFlow
         nodes={nodesForFlow}
         edges={edgesForFlow}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
+        onNodesChange={(changes) => setNodes((nds) => applyNodeChanges(changes, nds))}
+        onEdgesChange={(changes) => setEdges((eds) => applyEdgeChanges(changes, eds))}
+        onConnect={(connection) =>
+          setEdges((eds) =>
+            addEdge(
+              {
+                ...connection,
+                type: "smoothstep",
+                markerStart: { type: "ArrowClosed", color: "#6b7280" },
+                markerEnd: { type: "ArrowClosed", color: "#6b7280" },
+                style: { strokeWidth: 2, stroke: "#6b7280" },
+              },
+              eds,
+            ),
+          )
+        }
         nodeTypes={nodeTypes}
         proOptions={{ hideAttribution: true }}
         className="bg-white"
