@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -28,9 +27,6 @@ const getNodeDisplayName = (node) => {
 }
 
 export default function NodeManagerPage() {
-  const searchParams = useSearchParams()
-  const nodeId = searchParams.get("nodeId")
-
   const { data: flowData, isLoading, error } = useFlowData()
   const createNodeMutation = useCreateNode()
   const updateNodeMutation = useUpdateNode()
@@ -42,7 +38,6 @@ export default function NodeManagerPage() {
   const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false)
   const [editingNode, setEditingNode] = useState(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [highlightedNodeId, setHighlightedNodeId] = useState(null)
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     title: "",
@@ -54,18 +49,6 @@ export default function NodeManagerPage() {
   const nodes = useMemo(() => flowData?.nodes?.filter((node) => node.type !== "background") || [], [flowData])
   const edges = useMemo(() => flowData?.edges || [], [flowData])
   const backgroundNodes = useMemo(() => flowData?.nodes?.filter((node) => node.type === "background") || [], [flowData])
-
-  useEffect(() => {
-    if (nodeId && nodes.length > 0) {
-      const targetNode = nodes.find((node) => node.id === nodeId)
-      if (targetNode) {
-        setSearchQuery(getNodeDisplayName(targetNode))
-        setHighlightedNodeId(nodeId)
-        // Clear highlight after 3 seconds
-        setTimeout(() => setHighlightedNodeId(null), 3000)
-      }
-    }
-  }, [nodeId, nodes])
 
   const filteredNodes = useMemo(() => {
     if (!searchQuery.trim()) return nodes
@@ -265,7 +248,6 @@ export default function NodeManagerPage() {
 
   const clearSearch = () => {
     setSearchQuery("")
-    setHighlightedNodeId(null)
   }
 
   return (
@@ -427,30 +409,19 @@ export default function NodeManagerPage() {
               {filteredNodes.map((node) => {
                 const status = getNodeStatus(node)
                 const connections = getNodeConnections(node.id)
-                const isHighlighted = highlightedNodeId === node.id
 
                 return (
                   <Card
                     key={node.id}
-                    className={`shadow-md hover:shadow-lg transition-all duration-200 border-slate-200 bg-white hover:border-blue-200 ${
-                      isHighlighted ? "ring-2 ring-blue-400 border-blue-400 bg-blue-50" : ""
-                    }`}
+                    className="shadow-md hover:shadow-lg transition-all duration-200 border-slate-200 bg-white hover:border-blue-200"
                   >
                     <CardHeader className="pb-3 sm:pb-4">
                       <div className="flex justify-between items-start">
                         <div className="flex-1 min-w-0">
-                          <CardTitle
-                            className={`text-base sm:text-lg font-semibold truncate ${
-                              isHighlighted ? "text-blue-900" : "text-slate-900"
-                            }`}
-                          >
+                          <CardTitle className="text-base sm:text-lg font-semibold text-slate-900 truncate">
                             {getNodeDisplayName(node)}
                           </CardTitle>
-                          <CardDescription
-                            className={`text-xs sm:text-sm mt-1 truncate ${
-                              isHighlighted ? "text-blue-700" : "text-slate-500"
-                            }`}
-                          >
+                          <CardDescription className="text-xs sm:text-sm text-slate-500 mt-1 truncate">
                             {node.subtext || `ID: ${node.id}`}
                           </CardDescription>
                         </div>

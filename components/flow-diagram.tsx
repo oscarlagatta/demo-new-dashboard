@@ -1,7 +1,5 @@
 "use client"
 import { useState, useCallback, useEffect, useMemo } from "react"
-import type React from "react"
-
 import {
   ReactFlow,
   Background,
@@ -19,26 +17,36 @@ import {
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
 import { Loader2, RefreshCw, AlertCircle } from "lucide-react"
-import { useRouter } from "next/navigation"
+
 import { useGetSplunk } from "@/hooks/use-get-splunk"
 import { initialNodes, initialEdges } from "@/lib/flow-data"
 import CustomNode from "./custom-node"
 import SectionBackgroundNode from "./section-background-node"
+import GroupNode from "./group-node"
 import { computeTrafficStatusColors } from "@/lib/traffic-status-utils"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TransactionDetailsTable } from "./transaction-details-table"
 import { useTransactionSearchContext } from "./transaction-search-provider"
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
 
 const nodeTypes: NodeTypes = {
   custom: CustomNode,
   background: SectionBackgroundNode,
+  group: GroupNode, // Added group node type
 }
 
 const SECTION_IDS = ["bg-origination", "bg-validation", "bg-middleware", "bg-processing"]
 const SECTION_WIDTH_PROPORTIONS = [0.2, 0.2, 0.25, 0.35]
 const GAP_WIDTH = 16
+
+const NODE_GROUPS = [
+  {
+    id: "sanctions-group",
+    label: "Sanctions & Compliance",
+    nodeIds: ["515", "62686", "46951"], // GPS Aries, GTMS (Limits), ETS (Sanctions)
+    padding: 20,
+  },
+]
 
 const Flow = () => {
   const { showTableView } = useTransactionSearchContext()
@@ -48,9 +56,6 @@ const Flow = () => {
   const [connectedNodeIds, setConnectedNodeIds] = useState<Set<string>>(new Set())
   const [connectedEdgeIds, setConnectedEdgeIds] = useState<Set<string>>(new Set())
   const [lastRefetch, setLastRefetch] = useState<Date | null>(null)
-  const [contextMenuNodeId, setContextMenuNodeId] = useState<string | null>(null)
-
-  const router = useRouter()
 
   const width = useStore((state) => state.width)
   const height = useStore((state) => state.height)
@@ -65,34 +70,6 @@ const Flow = () => {
       console.error("Refetch failed:", error)
     }
   }
-
-  const handleAITsManagement = useCallback(() => {
-    if (contextMenuNodeId) {
-      router.push(`/node-manager?nodeId=${contextMenuNodeId}`)
-    } else {
-      router.push("/node-manager")
-    }
-  }, [contextMenuNodeId, router])
-
-  const handleNodeContextMenu = useCallback((event: React.MouseEvent, nodeId: string) => {
-    event.preventDefault()
-    event.stopPropagation()
-    setContextMenuNodeId(nodeId)
-  }, [])
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.shiftKey && event.key === "F10") || event.key === "ContextMenu") {
-        if (selectedNodeId) {
-          event.preventDefault()
-          setContextMenuNodeId(selectedNodeId)
-        }
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown)
-    return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [selectedNodeId])
 
   const findConnections = useCallback(
     (nodeId: string) => {
@@ -227,8 +204,62 @@ const Flow = () => {
     [setEdges],
   )
 
+  const calculateGroupBounds = useCallback(
+    (nodeIds: string[], padding: number) => {
+      const groupNodes = nodes.filter((node) => nodeIds.includes(node.id))
+      if (groupNodes.length === 0) return null
+
+      let minX = Number.POSITIVE_INFINITY,
+        minY = Number.POSITIVE_INFINITY,
+        maxX = Number.NEGATIVE_INFINITY,
+        maxY = Number.NEGATIVE_INFINITY
+
+      groupNodes.forEach((node) => {
+        const nodeWidth = 200 // Default node width
+        const nodeHeight = 80 // Default node height
+
+        minX = Math.min(minX, node.position.x)
+        minY = Math.min(minY, node.position.y)
+        maxX = Math.max(maxX, node.position.x + nodeWidth)
+        maxY = Math.max(maxY, node.position.y + nodeHeight)
+      })
+
+      return {
+        x: minX - padding,
+        y: minY - padding,
+        width: maxX - minX + padding * 2,
+        height: maxY - minY + padding * 2,
+      }
+    },
+    [nodes],
+  )
+
+  const groupNodes = useMemo(() => {
+    return NODE_GROUPS.map((group) => {
+      const bounds = calculateGroupBounds(group.nodeIds, group.padding)
+      if (!bounds) return null
+
+      return {
+        id: group.id,
+        type: "group" as const,
+        position: { x: bounds.x, y: bounds.y },
+        data: {
+          label: group.label,
+          width: bounds.width,
+          height: bounds.height,
+        },
+        draggable: false,
+        selectable: false,
+        zIndex: -0.5, // Behind regular nodes but above background
+        style: {
+          pointerEvents: "none", // Allow clicks to pass through to nodes below
+        },
+      }
+    }).filter(Boolean)
+  }, [calculateGroupBounds])
+
   const nodesForFlow = useMemo(() => {
-    return nodes.map((node) => {
+    const regularNodes = nodes.map((node) => {
       const isSelected = selectedNodeId === node.id
       const isConnected = connectedNodeIds.has(node.id)
       const isDimmed = selectedNodeId && !isSelected && !isConnected
@@ -239,7 +270,6 @@ const Flow = () => {
         isConnected,
         isDimmed,
         onClick: handleNodeClick,
-        onContextMenu: (e: React.MouseEvent) => handleNodeContextMenu(e, node.id),
       }
 
       if (node.parentId) {
@@ -255,7 +285,9 @@ const Flow = () => {
         data: nodeData,
       }
     })
-  }, [nodes, selectedNodeId, connectedNodeIds, handleNodeClick, handleNodeContextMenu])
+
+    return [...regularNodes, ...groupNodes]
+  }, [nodes, selectedNodeId, connectedNodeIds, handleNodeClick, groupNodes])
 
   const edgesForFlow = useMemo(() => {
     return edges.map((edge) => {
@@ -375,12 +407,8 @@ const Flow = () => {
   }
 
   return (
-    <div
-      className="h-full w-full relative"
-      role="application"
-      aria-label="Payment flow diagram"
-      onContextMenu={(e) => e.preventDefault()} // Disable default context menu on background
-    >
+    <div className="h-full w-full relative">
+      {/* Refresh Data Button - Icon only, docked top-right */}
       <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
         {lastRefetch && !isFetching && (
           <span className="text-xs text-muted-foreground">Last updated: {lastRefetch.toLocaleTimeString()}</span>
@@ -417,26 +445,7 @@ const Flow = () => {
         <Background gap={16} size={1} />
       </ReactFlow>
 
-      {contextMenuNodeId && (
-        <ContextMenu open={!!contextMenuNodeId} onOpenChange={(open) => !open && setContextMenuNodeId(null)}>
-          <ContextMenuTrigger asChild>
-            <div className="fixed inset-0 pointer-events-none" />
-          </ContextMenuTrigger>
-          <ContextMenuContent
-            className="w-48 bg-white border border-slate-200 shadow-md rounded-md p-1"
-            aria-label="Node context menu"
-          >
-            <ContextMenuItem
-              onClick={handleAITsManagement}
-              className="flex items-center px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-sm cursor-pointer focus:bg-slate-100 focus:text-slate-900 focus:outline-none"
-              role="menuitem"
-            >
-              AITs Management
-            </ContextMenuItem>
-          </ContextMenuContent>
-        </ContextMenu>
-      )}
-
+      {/* Selected panel */}
       {selectedNodeId && (
         <div className="absolute top-4 left-4 z-10 max-w-sm bg-white border rounded-lg shadow-lg p-4">
           <h3 className="text-sm font-semibold mb-2 text-gray-800">
@@ -468,6 +477,7 @@ const Flow = () => {
 }
 
 export function FlowDiagram() {
+  // Use the top-level QueryProvider; only keep ReactFlowProvider here
   return (
     <ReactFlowProvider>
       <Flow />
