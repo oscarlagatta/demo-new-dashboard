@@ -1,5 +1,5 @@
 "use client"
-import { useState, useCallback, useEffect, useMemo } from "react"
+import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import {
   ReactFlow,
   Background,
@@ -32,19 +32,29 @@ import { useTransactionSearchContext } from "./transaction-search-provider"
 const nodeTypes: NodeTypes = {
   custom: CustomNode,
   background: SectionBackgroundNode,
-  group: GroupNode, // Added group node type
+  group: GroupNode,
 }
 
 const SECTION_IDS = ["bg-origination", "bg-validation", "bg-middleware", "bg-processing"]
 const SECTION_WIDTH_PROPORTIONS = [0.2, 0.2, 0.25, 0.35]
 const GAP_WIDTH = 16
 
-const NODE_GROUPS = [
+const STATIC_GROUP_NODES = [
   {
     id: "sanctions-group",
-    label: "Sanctions & Compliance",
-    nodeIds: ["515", "62686", "46951"], // GPS Aries, GTMS (Limits), ETS (Sanctions)
-    padding: 20,
+    type: "group" as const,
+    position: { x: 650, y: 150 }, // Static position in middleware section
+    data: {
+      label: "Sanctions & Compliance",
+      width: 480,
+      height: 200,
+    },
+    draggable: false,
+    selectable: false,
+    zIndex: -0.5,
+    style: {
+      pointerEvents: "none" as const,
+    },
   },
 ]
 
@@ -56,6 +66,7 @@ const Flow = () => {
   const [connectedNodeIds, setConnectedNodeIds] = useState<Set<string>>(new Set())
   const [connectedEdgeIds, setConnectedEdgeIds] = useState<Set<string>>(new Set())
   const [lastRefetch, setLastRefetch] = useState<Date | null>(null)
+  const previousBoundsRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null)
 
   const width = useStore((state) => state.width)
   const height = useStore((state) => state.height)
@@ -204,59 +215,51 @@ const Flow = () => {
     [setEdges],
   )
 
-  const calculateGroupBounds = useCallback(
-    (nodeIds: string[], padding: number) => {
-      const groupNodes = nodes.filter((node) => nodeIds.includes(node.id))
-      if (groupNodes.length === 0) return null
+  const calculateGroupBounds = useCallback((nodes: Node[]) => {
+    const targetNodeIds = ["515", "62686", "46951"]
+    const targetNodes = nodes.filter((node) => targetNodeIds.includes(node.id))
 
-      let minX = Number.POSITIVE_INFINITY,
-        minY = Number.POSITIVE_INFINITY,
-        maxX = Number.NEGATIVE_INFINITY,
-        maxY = Number.NEGATIVE_INFINITY
+    if (targetNodes.length === 0) {
+      return { x: 650, y: 150, width: 480, height: 200 }
+    }
 
-      groupNodes.forEach((node) => {
-        const nodeWidth = 200 // Default node width
-        const nodeHeight = 80 // Default node height
+    const positions = targetNodes.map((node) => ({
+      x: node.position.x,
+      y: node.position.y,
+      width: 200,
+      height: 80,
+    }))
 
-        minX = Math.min(minX, node.position.x)
-        minY = Math.min(minY, node.position.y)
-        maxX = Math.max(maxX, node.position.x + nodeWidth)
-        maxY = Math.max(maxY, node.position.y + nodeHeight)
-      })
+    const minX = Math.min(...positions.map((p) => p.x))
+    const maxX = Math.max(...positions.map((p) => p.x + p.width))
+    const minY = Math.min(...positions.map((p) => p.y))
+    const maxY = Math.max(...positions.map((p) => p.y + p.height))
 
-      return {
-        x: minX - padding,
-        y: minY - padding,
-        width: maxX - minX + padding * 2,
-        height: maxY - minY + padding * 2,
+    const padding = 40
+    const groupBounds = {
+      x: minX - padding,
+      y: minY - padding,
+      width: maxX - minX + padding * 2,
+      height: maxY - minY + padding * 2,
+    }
+
+    const previous = previousBoundsRef.current
+    if (previous) {
+      const threshold = 5
+      const hasSignificantChange =
+        Math.abs(previous.x - groupBounds.x) > threshold ||
+        Math.abs(previous.y - groupBounds.y) > threshold ||
+        Math.abs(previous.width - groupBounds.width) > threshold ||
+        Math.abs(previous.height - groupBounds.height) > threshold
+
+      if (!hasSignificantChange) {
+        return previous
       }
-    },
-    [nodes],
-  )
+    }
 
-  const groupNodes = useMemo(() => {
-    return NODE_GROUPS.map((group) => {
-      const bounds = calculateGroupBounds(group.nodeIds, group.padding)
-      if (!bounds) return null
-
-      return {
-        id: group.id,
-        type: "group" as const,
-        position: { x: bounds.x, y: bounds.y },
-        data: {
-          label: group.label,
-          width: bounds.width,
-          height: bounds.height,
-        },
-        draggable: false,
-        selectable: false,
-        zIndex: -0.5, // Behind regular nodes but above background
-        style: {
-          pointerEvents: "none", // Allow clicks to pass through to nodes below
-        },
-      }
-    }).filter(Boolean)
-  }, [calculateGroupBounds])
+    previousBoundsRef.current = groupBounds
+    return groupBounds
+  }, [])
 
   const nodesForFlow = useMemo(() => {
     const regularNodes = nodes.map((node) => {
@@ -286,8 +289,29 @@ const Flow = () => {
       }
     })
 
-    return [...regularNodes, ...groupNodes]
-  }, [nodes, selectedNodeId, connectedNodeIds, handleNodeClick, groupNodes])
+    const groupBounds = calculateGroupBounds(regularNodes)
+
+    const dynamicGroupNodes = [
+      {
+        id: "sanctions-group",
+        type: "group" as const,
+        position: { x: groupBounds.x, y: groupBounds.y },
+        data: {
+          label: "Sanctions & Compliance",
+          width: groupBounds.width,
+          height: groupBounds.height,
+        },
+        draggable: false,
+        selectable: false,
+        zIndex: -0.5,
+        style: {
+          pointerEvents: "none" as const,
+        },
+      },
+    ]
+
+    return [...regularNodes, ...dynamicGroupNodes]
+  }, [nodes, selectedNodeId, connectedNodeIds, handleNodeClick, calculateGroupBounds])
 
   const edgesForFlow = useMemo(() => {
     return edges.map((edge) => {
@@ -408,7 +432,6 @@ const Flow = () => {
 
   return (
     <div className="h-full w-full relative">
-      {/* Refresh Data Button - Icon only, docked top-right */}
       <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
         {lastRefetch && !isFetching && (
           <span className="text-xs text-muted-foreground">Last updated: {lastRefetch.toLocaleTimeString()}</span>
@@ -445,7 +468,6 @@ const Flow = () => {
         <Background gap={16} size={1} />
       </ReactFlow>
 
-      {/* Selected panel */}
       {selectedNodeId && (
         <div className="absolute top-4 left-4 z-10 max-w-sm bg-white border rounded-lg shadow-lg p-4">
           <h3 className="text-sm font-semibold mb-2 text-gray-800">
@@ -477,7 +499,6 @@ const Flow = () => {
 }
 
 export function FlowDiagram() {
-  // Use the top-level QueryProvider; only keep ReactFlowProvider here
   return (
     <ReactFlowProvider>
       <Flow />
