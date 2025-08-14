@@ -117,16 +117,43 @@ const Flow = () => {
   }, [selectedNodeId, connectedNodeIds, nodes])
 
   useEffect(() => {
+    // Suppress ResizeObserver loop errors globally
+    const originalError = console.error
+    console.error = (...args) => {
+      if (args[0] && typeof args[0] === "string" && args[0].includes("ResizeObserver loop")) {
+        return
+      }
+      originalError.apply(console, args)
+    }
+
+    // Handle window error events
     const handleResizeObserverError = (e: ErrorEvent) => {
-      if (e.message === "ResizeObserver loop completed with undelivered notifications.") {
+      if (
+        e.message.includes("ResizeObserver loop") ||
+        e.message.includes("ResizeObserver loop completed with undelivered notifications")
+      ) {
         e.preventDefault()
         e.stopPropagation()
         return false
       }
     }
 
+    // Handle unhandled promise rejections
+    const handleUnhandledRejection = (e: PromiseRejectionEvent) => {
+      if (e.reason && typeof e.reason === "string" && e.reason.includes("ResizeObserver loop")) {
+        e.preventDefault()
+        return false
+      }
+    }
+
     window.addEventListener("error", handleResizeObserverError)
-    return () => window.removeEventListener("error", handleResizeObserverError)
+    window.addEventListener("unhandledrejection", handleUnhandledRejection)
+
+    return () => {
+      console.error = originalError
+      window.removeEventListener("error", handleResizeObserverError)
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection)
+    }
   }, [])
 
   useEffect(() => {
