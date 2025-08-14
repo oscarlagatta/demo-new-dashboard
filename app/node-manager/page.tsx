@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Trash2, Edit, Plus, ArrowLeft, Home, LinkIcon, Search, X, History } from "lucide-react"
+import { Trash2, Edit, Plus, ArrowLeft, Home, LinkIcon, Search, X } from "lucide-react"
 import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -19,7 +20,6 @@ import {
 import { NodeFormModal } from "@/components/node-form-modal"
 import { ConnectionFormModal } from "@/components/connection-form-modal"
 import { ConfirmationDialog } from "@/components/confirmation-dialog"
-import { VersionHistoryModal } from "@/components/version-history-modal"
 import { useToast } from "@/hooks/use-toast"
 
 const getNodeDisplayName = (node) => {
@@ -28,6 +28,9 @@ const getNodeDisplayName = (node) => {
 }
 
 export default function NodeManagerPage() {
+  const searchParams = useSearchParams()
+  const nodeId = searchParams.get("nodeId")
+
   const { data: flowData, isLoading, error } = useFlowData()
   const createNodeMutation = useCreateNode()
   const updateNodeMutation = useUpdateNode()
@@ -39,22 +42,30 @@ export default function NodeManagerPage() {
   const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false)
   const [editingNode, setEditingNode] = useState(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [highlightedNodeId, setHighlightedNodeId] = useState(null)
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     title: "",
     description: "",
     onConfirm: () => {},
   })
-  const [versionHistoryModal, setVersionHistoryModal] = useState({
-    isOpen: false,
-    systemName: "",
-    systemId: "",
-  })
   const { toast } = useToast()
 
   const nodes = useMemo(() => flowData?.nodes?.filter((node) => node.type !== "background") || [], [flowData])
   const edges = useMemo(() => flowData?.edges || [], [flowData])
   const backgroundNodes = useMemo(() => flowData?.nodes?.filter((node) => node.type === "background") || [], [flowData])
+
+  useEffect(() => {
+    if (nodeId && nodes.length > 0) {
+      const targetNode = nodes.find((node) => node.id === nodeId)
+      if (targetNode) {
+        setSearchQuery(getNodeDisplayName(targetNode))
+        setHighlightedNodeId(nodeId)
+        // Clear highlight after 3 seconds
+        setTimeout(() => setHighlightedNodeId(null), 3000)
+      }
+    }
+  }, [nodeId, nodes])
 
   const filteredNodes = useMemo(() => {
     if (!searchQuery.trim()) return nodes
@@ -207,25 +218,6 @@ export default function NodeManagerPage() {
     })
   }
 
-  const handleViewVersionHistory = (node) => {
-    setVersionHistoryModal({
-      isOpen: true,
-      systemName: getNodeDisplayName(node),
-      systemId: node.id,
-    })
-  }
-
-  const handleRevertVersion = async (versionId) => {
-    try {
-      // In a real app, this would call an API to revert the system
-      console.log(`Reverting to version: ${versionId}`)
-      toast({ title: "System reverted successfully" })
-    } catch (error) {
-      toast({ title: "Error reverting system", variant: "destructive" })
-      throw error
-    }
-  }
-
   const getNodeStatus = (node) => {
     if (node.class === "inactive") return "inactive"
     if (node.parentId) return "active"
@@ -273,6 +265,7 @@ export default function NodeManagerPage() {
 
   const clearSearch = () => {
     setSearchQuery("")
+    setHighlightedNodeId(null)
   }
 
   return (
@@ -434,32 +427,34 @@ export default function NodeManagerPage() {
               {filteredNodes.map((node) => {
                 const status = getNodeStatus(node)
                 const connections = getNodeConnections(node.id)
+                const isHighlighted = highlightedNodeId === node.id
 
                 return (
                   <Card
                     key={node.id}
-                    className="shadow-md hover:shadow-lg transition-all duration-200 border-slate-200 bg-white hover:border-blue-200"
+                    className={`shadow-md hover:shadow-lg transition-all duration-200 border-slate-200 bg-white hover:border-blue-200 ${
+                      isHighlighted ? "ring-2 ring-blue-400 border-blue-400 bg-blue-50" : ""
+                    }`}
                   >
                     <CardHeader className="pb-3 sm:pb-4">
                       <div className="flex justify-between items-start">
                         <div className="flex-1 min-w-0">
-                          <CardTitle className="text-base sm:text-lg font-semibold text-slate-900 truncate">
+                          <CardTitle
+                            className={`text-base sm:text-lg font-semibold truncate ${
+                              isHighlighted ? "text-blue-900" : "text-slate-900"
+                            }`}
+                          >
                             {getNodeDisplayName(node)}
                           </CardTitle>
-                          <CardDescription className="text-xs sm:text-sm text-slate-500 mt-1 truncate">
+                          <CardDescription
+                            className={`text-xs sm:text-sm mt-1 truncate ${
+                              isHighlighted ? "text-blue-700" : "text-slate-500"
+                            }`}
+                          >
                             {node.subtext || `ID: ${node.id}`}
                           </CardDescription>
                         </div>
                         <div className="flex gap-1 ml-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewVersionHistory(node)}
-                            className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-slate-500 hover:text-blue-700 hover:bg-blue-50"
-                            title="View Version History"
-                          >
-                            <History className="h-3 w-3 sm:h-4 sm:w-4" />
-                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -496,17 +491,6 @@ export default function NodeManagerPage() {
                               Parent: {backgroundNodes.find((bg) => bg.id === node.parentId)?.label || node.parentId}
                             </div>
                           )}
-                        </div>
-                        <div className="pt-2 border-t border-slate-100">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewVersionHistory(node)}
-                            className="w-full text-xs text-slate-600 hover:text-blue-700 hover:bg-blue-50 h-7 justify-center"
-                          >
-                            <History className="h-3 w-3 mr-1" />
-                            Version History
-                          </Button>
                         </div>
                       </div>
                     </CardContent>
@@ -606,15 +590,6 @@ export default function NodeManagerPage() {
           confirmText="Delete"
           cancelText="Cancel"
           isDestructive={true}
-        />
-
-        <VersionHistoryModal
-          isOpen={versionHistoryModal.isOpen}
-          onClose={() => setVersionHistoryModal({ isOpen: false, systemName: "", systemId: "" })}
-          systemName={versionHistoryModal.systemName}
-          systemId={versionHistoryModal.systemId}
-          onRevert={handleRevertVersion}
-          isLoading={false}
         />
       </div>
     </div>

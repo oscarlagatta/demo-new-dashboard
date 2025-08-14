@@ -1,5 +1,7 @@
 "use client"
 import { useState, useCallback, useEffect, useMemo } from "react"
+import type React from "react"
+
 import {
   ReactFlow,
   Background,
@@ -17,7 +19,7 @@ import {
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
 import { Loader2, RefreshCw, AlertCircle } from "lucide-react"
-
+import { useRouter } from "next/navigation"
 import { useGetSplunk } from "@/hooks/use-get-splunk"
 import { initialNodes, initialEdges } from "@/lib/flow-data"
 import CustomNode from "./custom-node"
@@ -27,6 +29,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TransactionDetailsTable } from "./transaction-details-table"
 import { useTransactionSearchContext } from "./transaction-search-provider"
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
 
 const nodeTypes: NodeTypes = {
   custom: CustomNode,
@@ -45,6 +48,9 @@ const Flow = () => {
   const [connectedNodeIds, setConnectedNodeIds] = useState<Set<string>>(new Set())
   const [connectedEdgeIds, setConnectedEdgeIds] = useState<Set<string>>(new Set())
   const [lastRefetch, setLastRefetch] = useState<Date | null>(null)
+  const [contextMenuNodeId, setContextMenuNodeId] = useState<string | null>(null)
+
+  const router = useRouter()
 
   const width = useStore((state) => state.width)
   const height = useStore((state) => state.height)
@@ -59,6 +65,31 @@ const Flow = () => {
       console.error("Refetch failed:", error)
     }
   }
+
+  const handleAITsManagement = useCallback(() => {
+    if (contextMenuNodeId) {
+      router.push(`/node-manager?nodeId=${contextMenuNodeId}`)
+    } else {
+      router.push("/node-manager")
+    }
+  }, [contextMenuNodeId, router])
+
+  const handleContextMenu = useCallback((event: React.MouseEvent, nodeId?: string) => {
+    event.preventDefault()
+    setContextMenuNodeId(nodeId || null)
+  }, [])
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.shiftKey && event.key === "F10") || event.key === "ContextMenu") {
+        event.preventDefault()
+        setContextMenuNodeId(selectedNodeId)
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [selectedNodeId])
 
   const findConnections = useCallback(
     (nodeId: string) => {
@@ -340,77 +371,104 @@ const Flow = () => {
   }
 
   return (
-    <div className="h-full w-full relative">
-      {/* Refresh Data Button - Icon only, docked top-right */}
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-        {lastRefetch && !isFetching && (
-          <span className="text-xs text-muted-foreground">Last updated: {lastRefetch.toLocaleTimeString()}</span>
-        )}
-        <Button
-          onClick={handleRefetch}
-          disabled={isFetching}
-          variant="outline"
-          size="sm"
-          className="h-8 w-8 p-0 shadow-sm border-blue-200 hover:border-blue-300 hover:bg-blue-50 bg-white"
-          title="Refresh Splunk data"
-          aria-label="Refresh Splunk data"
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div
+          className="h-full w-full relative"
+          onContextMenu={(e) => handleContextMenu(e)}
+          role="application"
+          aria-label="Payment flow diagram with context menu"
         >
-          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-        </Button>
-      </div>
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+            {lastRefetch && !isFetching && (
+              <span className="text-xs text-muted-foreground">Last updated: {lastRefetch.toLocaleTimeString()}</span>
+            )}
+            <Button
+              onClick={handleRefetch}
+              disabled={isFetching}
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0 shadow-sm border-blue-200 hover:border-blue-300 hover:bg-blue-50 bg-white"
+              title="Refresh Splunk data"
+              aria-label="Refresh Splunk data"
+            >
+              <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
 
-      <ReactFlow
-        nodes={nodesForFlow}
-        edges={edgesForFlow}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        nodeTypes={nodeTypes}
-        proOptions={{ hideAttribution: true }}
-        className="bg-white"
-        style={{ background: "#eeeff3ff" }}
-        panOnDrag={false}
-        elementsSelectable={false}
-        minZoom={1}
-        maxZoom={1}
-      >
-        <Controls />
-        <Background gap={16} size={1} />
-      </ReactFlow>
+          <ReactFlow
+            nodes={nodesForFlow.map((node) => ({
+              ...node,
+              data: {
+                ...node.data,
+                onContextMenu: (e: React.MouseEvent) => handleContextMenu(e, node.id),
+              },
+            }))}
+            edges={edgesForFlow}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            nodeTypes={nodeTypes}
+            proOptions={{ hideAttribution: true }}
+            className="bg-white"
+            style={{ background: "#eeeff3ff" }}
+            panOnDrag={false}
+            elementsSelectable={false}
+            minZoom={1}
+            maxZoom={1}
+          >
+            <Controls />
+            <Background gap={16} size={1} />
+          </ReactFlow>
 
-      {/* Selected panel */}
-      {selectedNodeId && (
-        <div className="absolute top-4 left-4 z-10 max-w-sm bg-white border rounded-lg shadow-lg p-4">
-          <h3 className="text-sm font-semibold mb-2 text-gray-800">
-            Selected System: {nodes.find((n) => n.id === selectedNodeId)?.data?.title}
-          </h3>
-          <div className="space-y-2">
-            <div>
-              <h4 className="text-xs font-medium text-gray-600 mb-1">Connected Systems ({connectedNodeIds.size}):</h4>
-              <div className="max-h-32 overflow-y-auto">
-                {getConnectedSystemNames().map((systemName, index) => (
-                  <div key={index} className="text-xs text-gray-700 py-1 px-2 bg-blue-50 rounded mb-1">
-                    {systemName}
+          {selectedNodeId && (
+            <div className="absolute top-4 left-4 z-10 max-w-sm bg-white border rounded-lg shadow-lg p-4">
+              <h3 className="text-sm font-semibold mb-2 text-gray-800">
+                Selected System: {nodes.find((n) => n.id === selectedNodeId)?.data?.title}
+              </h3>
+              <div className="space-y-2">
+                <div>
+                  <h4 className="text-xs font-medium text-gray-600 mb-1">
+                    Connected Systems ({connectedNodeIds.size}):
+                  </h4>
+                  <div className="max-h-32 overflow-y-auto">
+                    {getConnectedSystemNames().map((systemName, index) => (
+                      <div key={index} className="text-xs text-gray-700 py-1 px-2 bg-blue-50 rounded mb-1">
+                        {systemName}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+                <button
+                  onClick={() => handleNodeClick(selectedNodeId)}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
+                  disabled={isLoading || isFetching}
+                >
+                  Clear Selection
+                </button>
               </div>
             </div>
-            <button
-              onClick={() => handleNodeClick(selectedNodeId)}
-              className="text-xs text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
-              disabled={isLoading || isFetching}
-            >
-              Clear Selection
-            </button>
-          </div>
+          )}
         </div>
-      )}
-    </div>
+      </ContextMenuTrigger>
+
+      <ContextMenuContent
+        className="w-48 bg-white border border-slate-200 shadow-md rounded-md p-1"
+        aria-label="Flow diagram context menu"
+      >
+        <ContextMenuItem
+          onClick={handleAITsManagement}
+          className="flex items-center px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-sm cursor-pointer focus:bg-slate-100 focus:text-slate-900 focus:outline-none"
+          role="menuitem"
+        >
+          AITs Management
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }
 
 export function FlowDiagram() {
-  // Use the top-level QueryProvider; only keep ReactFlowProvider here
   return (
     <ReactFlowProvider>
       <Flow />
