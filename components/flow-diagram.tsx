@@ -74,16 +74,19 @@ const Flow = () => {
     }
   }, [contextMenuNodeId, router])
 
-  const handleContextMenu = useCallback((event: React.MouseEvent, nodeId?: string) => {
+  const handleNodeContextMenu = useCallback((event: React.MouseEvent, nodeId: string) => {
     event.preventDefault()
-    setContextMenuNodeId(nodeId || null)
+    event.stopPropagation()
+    setContextMenuNodeId(nodeId)
   }, [])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.shiftKey && event.key === "F10") || event.key === "ContextMenu") {
-        event.preventDefault()
-        setContextMenuNodeId(selectedNodeId)
+        if (selectedNodeId) {
+          event.preventDefault()
+          setContextMenuNodeId(selectedNodeId)
+        }
       }
     }
 
@@ -236,6 +239,7 @@ const Flow = () => {
         isConnected,
         isDimmed,
         onClick: handleNodeClick,
+        onContextMenu: (e: React.MouseEvent) => handleNodeContextMenu(e, node.id),
       }
 
       if (node.parentId) {
@@ -251,7 +255,7 @@ const Flow = () => {
         data: nodeData,
       }
     })
-  }, [nodes, selectedNodeId, connectedNodeIds, handleNodeClick])
+  }, [nodes, selectedNodeId, connectedNodeIds, handleNodeClick, handleNodeContextMenu])
 
   const edgesForFlow = useMemo(() => {
     return edges.map((edge) => {
@@ -371,100 +375,95 @@ const Flow = () => {
   }
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div
-          className="h-full w-full relative"
-          onContextMenu={(e) => handleContextMenu(e)}
-          role="application"
-          aria-label="Payment flow diagram with context menu"
+    <div
+      className="h-full w-full relative"
+      role="application"
+      aria-label="Payment flow diagram"
+      onContextMenu={(e) => e.preventDefault()} // Disable default context menu on background
+    >
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        {lastRefetch && !isFetching && (
+          <span className="text-xs text-muted-foreground">Last updated: {lastRefetch.toLocaleTimeString()}</span>
+        )}
+        <Button
+          onClick={handleRefetch}
+          disabled={isFetching}
+          variant="outline"
+          size="sm"
+          className="h-8 w-8 p-0 shadow-sm border-blue-200 hover:border-blue-300 hover:bg-blue-50 bg-white"
+          title="Refresh Splunk data"
+          aria-label="Refresh Splunk data"
         >
-          <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-            {lastRefetch && !isFetching && (
-              <span className="text-xs text-muted-foreground">Last updated: {lastRefetch.toLocaleTimeString()}</span>
-            )}
-            <Button
-              onClick={handleRefetch}
-              disabled={isFetching}
-              variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0 shadow-sm border-blue-200 hover:border-blue-300 hover:bg-blue-50 bg-white"
-              title="Refresh Splunk data"
-              aria-label="Refresh Splunk data"
-            >
-              <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-            </Button>
-          </div>
+          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+        </Button>
+      </div>
 
-          <ReactFlow
-            nodes={nodesForFlow.map((node) => ({
-              ...node,
-              data: {
-                ...node.data,
-                onContextMenu: (e: React.MouseEvent) => handleContextMenu(e, node.id),
-              },
-            }))}
-            edges={edgesForFlow}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            nodeTypes={nodeTypes}
-            proOptions={{ hideAttribution: true }}
-            className="bg-white"
-            style={{ background: "#eeeff3ff" }}
-            panOnDrag={false}
-            elementsSelectable={false}
-            minZoom={1}
-            maxZoom={1}
+      <ReactFlow
+        nodes={nodesForFlow}
+        edges={edgesForFlow}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        nodeTypes={nodeTypes}
+        proOptions={{ hideAttribution: true }}
+        className="bg-white"
+        style={{ background: "#eeeff3ff" }}
+        panOnDrag={false}
+        elementsSelectable={false}
+        minZoom={1}
+        maxZoom={1}
+      >
+        <Controls />
+        <Background gap={16} size={1} />
+      </ReactFlow>
+
+      {contextMenuNodeId && (
+        <ContextMenu open={!!contextMenuNodeId} onOpenChange={(open) => !open && setContextMenuNodeId(null)}>
+          <ContextMenuTrigger asChild>
+            <div className="fixed inset-0 pointer-events-none" />
+          </ContextMenuTrigger>
+          <ContextMenuContent
+            className="w-48 bg-white border border-slate-200 shadow-md rounded-md p-1"
+            aria-label="Node context menu"
           >
-            <Controls />
-            <Background gap={16} size={1} />
-          </ReactFlow>
+            <ContextMenuItem
+              onClick={handleAITsManagement}
+              className="flex items-center px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-sm cursor-pointer focus:bg-slate-100 focus:text-slate-900 focus:outline-none"
+              role="menuitem"
+            >
+              AITs Management
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      )}
 
-          {selectedNodeId && (
-            <div className="absolute top-4 left-4 z-10 max-w-sm bg-white border rounded-lg shadow-lg p-4">
-              <h3 className="text-sm font-semibold mb-2 text-gray-800">
-                Selected System: {nodes.find((n) => n.id === selectedNodeId)?.data?.title}
-              </h3>
-              <div className="space-y-2">
-                <div>
-                  <h4 className="text-xs font-medium text-gray-600 mb-1">
-                    Connected Systems ({connectedNodeIds.size}):
-                  </h4>
-                  <div className="max-h-32 overflow-y-auto">
-                    {getConnectedSystemNames().map((systemName, index) => (
-                      <div key={index} className="text-xs text-gray-700 py-1 px-2 bg-blue-50 rounded mb-1">
-                        {systemName}
-                      </div>
-                    ))}
+      {selectedNodeId && (
+        <div className="absolute top-4 left-4 z-10 max-w-sm bg-white border rounded-lg shadow-lg p-4">
+          <h3 className="text-sm font-semibold mb-2 text-gray-800">
+            Selected System: {nodes.find((n) => n.id === selectedNodeId)?.data?.title}
+          </h3>
+          <div className="space-y-2">
+            <div>
+              <h4 className="text-xs font-medium text-gray-600 mb-1">Connected Systems ({connectedNodeIds.size}):</h4>
+              <div className="max-h-32 overflow-y-auto">
+                {getConnectedSystemNames().map((systemName, index) => (
+                  <div key={index} className="text-xs text-gray-700 py-1 px-2 bg-blue-50 rounded mb-1">
+                    {systemName}
                   </div>
-                </div>
-                <button
-                  onClick={() => handleNodeClick(selectedNodeId)}
-                  className="text-xs text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
-                  disabled={isLoading || isFetching}
-                >
-                  Clear Selection
-                </button>
+                ))}
               </div>
             </div>
-          )}
+            <button
+              onClick={() => handleNodeClick(selectedNodeId)}
+              className="text-xs text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
+              disabled={isLoading || isFetching}
+            >
+              Clear Selection
+            </button>
+          </div>
         </div>
-      </ContextMenuTrigger>
-
-      <ContextMenuContent
-        className="w-48 bg-white border border-slate-200 shadow-md rounded-md p-1"
-        aria-label="Flow diagram context menu"
-      >
-        <ContextMenuItem
-          onClick={handleAITsManagement}
-          className="flex items-center px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-sm cursor-pointer focus:bg-slate-100 focus:text-slate-900 focus:outline-none"
-          role="menuitem"
-        >
-          AITs Management
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
+      )}
+    </div>
   )
 }
 

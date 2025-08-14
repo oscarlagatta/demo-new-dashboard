@@ -24,6 +24,7 @@ type CustomNodeData = {
   isConnected?: boolean
   isDimmed?: boolean
   onClick?: (nodeId: string) => void
+  onContextMenu?: (event: React.MouseEvent) => void // Added context menu handler prop
 }
 
 type CustomNodeType = Node<CustomNodeData>
@@ -73,6 +74,12 @@ const CustomNode = ({ data, id }: NodeProps<CustomNodeType>) => {
     }
   }
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (data.onContextMenu) {
+      data.onContextMenu(e)
+    }
+  }
+
   // Determine styling based on selection state and loading
   const getCardClassName = () => {
     let baseClass = "border-2 border-slate-300 shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md"
@@ -112,7 +119,11 @@ const CustomNode = ({ data, id }: NodeProps<CustomNodeType>) => {
   const isMatched = !!aitNum && matchedAitIds.has(aitNum)
 
   return (
-    <Card className={getCardClassName()} onClick={handleClick}>
+    <Card
+      className={getCardClassName()}
+      onClick={handleClick}
+      onContextMenu={handleContextMenu} // Added context menu event handler
+    >
       <Handle type="target" position={Position.Left} className="!bg-slate-400 w-2 h-2" />
       <Handle type="source" position={Position.Right} className="!bg-slate-400 w-2 h-2" />
       <Handle type="source" position={Position.Top} className="!bg-slate-400 w-2 h-2" />
