@@ -1,5 +1,5 @@
 "use client"
-import { useState, useCallback, useEffect, useMemo } from "react"
+import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import {
   ReactFlow,
   Background,
@@ -39,25 +39,6 @@ const SECTION_IDS = ["bg-origination", "bg-validation", "bg-middleware", "bg-pro
 const SECTION_WIDTH_PROPORTIONS = [0.2, 0.2, 0.25, 0.35]
 const GAP_WIDTH = 16
 
-const STATIC_GROUP_NODES = [
-  {
-    id: "sanctions-group",
-    type: "group" as const,
-    position: { x: 650, y: 150 }, // Static position in middleware section
-    data: {
-      label: "Sanctions & Compliance",
-      width: 480,
-      height: 200,
-    },
-    draggable: false,
-    selectable: false,
-    zIndex: -0.5,
-    style: {
-      pointerEvents: "none" as const,
-    },
-  },
-]
-
 const Flow = () => {
   const { showTableView } = useTransactionSearchContext()
   const [nodes, setNodes] = useState<Node[]>(initialNodes)
@@ -66,7 +47,9 @@ const Flow = () => {
   const [connectedNodeIds, setConnectedNodeIds] = useState<Set<string>>(new Set())
   const [connectedEdgeIds, setConnectedEdgeIds] = useState<Set<string>>(new Set())
   const [lastRefetch, setLastRefetch] = useState<Date | null>(null)
-  const [groupBounds, setGroupBounds] = useState({ x: 650, y: 150, width: 480, height: 200 })
+
+  const previousDimensions = useRef({ width: 0, height: 0 })
+  const resizeTimeoutRef = useRef<NodeJS.Timeout>()
 
   const width = useStore((state) => state.width)
   const height = useStore((state) => state.height)
@@ -134,63 +117,99 @@ const Flow = () => {
   }, [selectedNodeId, connectedNodeIds, nodes])
 
   useEffect(() => {
+    const handleResizeObserverError = (e: ErrorEvent) => {
+      if (e.message === "ResizeObserver loop completed with undelivered notifications.") {
+        e.preventDefault()
+        e.stopPropagation()
+        return false
+      }
+    }
+
+    window.addEventListener("error", handleResizeObserverError)
+    return () => window.removeEventListener("error", handleResizeObserverError)
+  }, [])
+
+  useEffect(() => {
     if (width > 0 && height > 0) {
-      setNodes((currentNodes) => {
-        const totalGapWidth = GAP_WIDTH * (SECTION_IDS.length - 1)
-        const availableWidth = width - totalGapWidth
-        let currentX = 0
+      // Check if dimensions actually changed significantly
+      const dimensionChange =
+        Math.abs(width - previousDimensions.current.width) > 5 ||
+        Math.abs(height - previousDimensions.current.height) > 5
 
-        const newNodes = [...currentNodes]
-        const sectionDimensions: Record<string, { x: number; width: number }> = {}
+      if (!dimensionChange) return
 
-        for (let i = 0; i < SECTION_IDS.length; i++) {
-          const sectionId = SECTION_IDS[i]
-          const nodeIndex = newNodes.findIndex((n) => n.id === sectionId)
+      // Clear any existing timeout
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current)
+      }
 
-          if (nodeIndex !== -1) {
-            const sectionWidth = availableWidth * SECTION_WIDTH_PROPORTIONS[i]
-            sectionDimensions[sectionId] = { x: currentX, width: sectionWidth }
+      // Debounce the resize calculation
+      resizeTimeoutRef.current = setTimeout(() => {
+        previousDimensions.current = { width, height }
 
-            newNodes[nodeIndex] = {
-              ...newNodes[nodeIndex],
-              position: { x: currentX, y: 0 },
-              style: {
-                ...newNodes[nodeIndex].style,
-                width: `${sectionWidth}px`,
-                height: `${height}px`,
-              },
-            }
-            currentX += sectionWidth + GAP_WIDTH
-          }
-        }
+        setNodes((currentNodes) => {
+          const totalGapWidth = GAP_WIDTH * (SECTION_IDS.length - 1)
+          const availableWidth = width - totalGapWidth
+          let currentX = 0
 
-        for (let i = 0; i < newNodes.length; i++) {
-          const node = newNodes[i]
-          if (node.parentId && sectionDimensions[node.parentId]) {
-            const parentDimensions = sectionDimensions[node.parentId]
+          const newNodes = [...currentNodes]
+          const sectionDimensions: Record<string, { x: number; width: number }> = {}
 
-            const originalNode = initialNodes.find((n) => n.id === node.id)
-            const originalParent = initialNodes.find((n) => n.id === node.parentId)
+          for (let i = 0; i < SECTION_IDS.length; i++) {
+            const sectionId = SECTION_IDS[i]
+            const nodeIndex = newNodes.findIndex((n) => n.id === sectionId)
 
-            if (originalNode && originalParent && originalParent.style?.width) {
-              const originalParentWidth = Number.parseFloat(originalParent.style.width as string)
-              const originalRelativeXOffset = originalNode.position.x - originalParent.position.x
+            if (nodeIndex !== -1) {
+              const sectionWidth = availableWidth * SECTION_WIDTH_PROPORTIONS[i]
+              sectionDimensions[sectionId] = { x: currentX, width: sectionWidth }
 
-              const newAbsoluteX =
-                parentDimensions.x + (originalRelativeXOffset / originalParentWidth) * parentDimensions.width
-
-              newNodes[i] = {
-                ...node,
-                position: {
-                  x: newAbsoluteX,
-                  y: node.position.y,
+              newNodes[nodeIndex] = {
+                ...newNodes[nodeIndex],
+                position: { x: currentX, y: 0 },
+                style: {
+                  ...newNodes[nodeIndex].style,
+                  width: `${sectionWidth}px`,
+                  height: `${height}px`,
                 },
+              }
+              currentX += sectionWidth + GAP_WIDTH
+            }
+          }
+
+          for (let i = 0; i < newNodes.length; i++) {
+            const node = newNodes[i]
+            if (node.parentId && sectionDimensions[node.parentId]) {
+              const parentDimensions = sectionDimensions[node.parentId]
+
+              const originalNode = initialNodes.find((n) => n.id === node.id)
+              const originalParent = initialNodes.find((n) => n.id === node.parentId)
+
+              if (originalNode && originalParent && originalParent.style?.width) {
+                const originalParentWidth = Number.parseFloat(originalParent.style.width as string)
+                const originalRelativeXOffset = originalNode.position.x - originalParent.position.x
+
+                const newAbsoluteX =
+                  parentDimensions.x + (originalRelativeXOffset / originalParentWidth) * parentDimensions.width
+
+                newNodes[i] = {
+                  ...node,
+                  position: {
+                    x: newAbsoluteX,
+                    y: node.position.y,
+                  },
+                }
               }
             }
           }
-        }
-        return newNodes
-      })
+          return newNodes
+        })
+      }, 100) // 100ms debounce
+    }
+
+    return () => {
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current)
+      }
     }
   }, [width, height])
 
@@ -214,45 +233,6 @@ const Flow = () => {
       ),
     [setEdges],
   )
-
-  const updateGroupBounds = useCallback(() => {
-    const targetNodeIds = ["515", "62686", "46951"]
-    const targetNodes = nodes.filter((node) => targetNodeIds.includes(node.id))
-
-    if (targetNodes.length === 0) {
-      return
-    }
-
-    const positions = targetNodes.map((node) => ({
-      x: node.position.x,
-      y: node.position.y,
-      width: 200,
-      height: 80,
-    }))
-
-    const minX = Math.min(...positions.map((p) => p.x))
-    const maxX = Math.max(...positions.map((p) => p.x + p.width))
-    const minY = Math.min(...positions.map((p) => p.y))
-    const maxY = Math.max(...positions.map((p) => p.y + p.height))
-
-    const padding = 40
-    const newBounds = {
-      x: minX - padding,
-      y: minY - padding,
-      width: maxX - minX + padding * 2,
-      height: maxY - minY + padding * 2,
-    }
-
-    setGroupBounds(newBounds)
-  }, [nodes])
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      updateGroupBounds()
-    }, 100)
-
-    return () => clearTimeout(timeoutId)
-  }, [updateGroupBounds])
 
   const nodesForFlow = useMemo(() => {
     const regularNodes = nodes.map((node) => {
@@ -282,15 +262,15 @@ const Flow = () => {
       }
     })
 
-    const dynamicGroupNodes = [
+    const staticGroupNodes = [
       {
         id: "sanctions-group",
         type: "group" as const,
-        position: { x: groupBounds.x, y: groupBounds.y },
+        position: { x: 650, y: 150 }, // Static position in middleware section
         data: {
           label: "Sanctions & Compliance",
-          width: groupBounds.width,
-          height: groupBounds.height,
+          width: 480,
+          height: 200,
         },
         draggable: false,
         selectable: false,
@@ -301,8 +281,8 @@ const Flow = () => {
       },
     ]
 
-    return [...regularNodes, ...dynamicGroupNodes]
-  }, [nodes, selectedNodeId, connectedNodeIds, handleNodeClick, groupBounds])
+    return [...regularNodes, ...staticGroupNodes]
+  }, [nodes, selectedNodeId, connectedNodeIds, handleNodeClick])
 
   const edgesForFlow = useMemo(() => {
     return edges.map((edge) => {
