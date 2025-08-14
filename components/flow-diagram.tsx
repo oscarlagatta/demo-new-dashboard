@@ -1,5 +1,5 @@
 "use client"
-import { useState, useCallback, useEffect, useMemo, useRef } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import {
   ReactFlow,
   Background,
@@ -66,7 +66,7 @@ const Flow = () => {
   const [connectedNodeIds, setConnectedNodeIds] = useState<Set<string>>(new Set())
   const [connectedEdgeIds, setConnectedEdgeIds] = useState<Set<string>>(new Set())
   const [lastRefetch, setLastRefetch] = useState<Date | null>(null)
-  const previousBoundsRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null)
+  const [groupBounds, setGroupBounds] = useState({ x: 650, y: 150, width: 480, height: 200 })
 
   const width = useStore((state) => state.width)
   const height = useStore((state) => state.height)
@@ -215,12 +215,12 @@ const Flow = () => {
     [setEdges],
   )
 
-  const calculateGroupBounds = useCallback((nodes: Node[]) => {
+  const updateGroupBounds = useCallback(() => {
     const targetNodeIds = ["515", "62686", "46951"]
     const targetNodes = nodes.filter((node) => targetNodeIds.includes(node.id))
 
     if (targetNodes.length === 0) {
-      return { x: 650, y: 150, width: 480, height: 200 }
+      return
     }
 
     const positions = targetNodes.map((node) => ({
@@ -236,30 +236,23 @@ const Flow = () => {
     const maxY = Math.max(...positions.map((p) => p.y + p.height))
 
     const padding = 40
-    const groupBounds = {
+    const newBounds = {
       x: minX - padding,
       y: minY - padding,
       width: maxX - minX + padding * 2,
       height: maxY - minY + padding * 2,
     }
 
-    const previous = previousBoundsRef.current
-    if (previous) {
-      const threshold = 5
-      const hasSignificantChange =
-        Math.abs(previous.x - groupBounds.x) > threshold ||
-        Math.abs(previous.y - groupBounds.y) > threshold ||
-        Math.abs(previous.width - groupBounds.width) > threshold ||
-        Math.abs(previous.height - groupBounds.height) > threshold
+    setGroupBounds(newBounds)
+  }, [nodes])
 
-      if (!hasSignificantChange) {
-        return previous
-      }
-    }
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      updateGroupBounds()
+    }, 100)
 
-    previousBoundsRef.current = groupBounds
-    return groupBounds
-  }, [])
+    return () => clearTimeout(timeoutId)
+  }, [updateGroupBounds])
 
   const nodesForFlow = useMemo(() => {
     const regularNodes = nodes.map((node) => {
@@ -289,8 +282,6 @@ const Flow = () => {
       }
     })
 
-    const groupBounds = calculateGroupBounds(regularNodes)
-
     const dynamicGroupNodes = [
       {
         id: "sanctions-group",
@@ -311,7 +302,7 @@ const Flow = () => {
     ]
 
     return [...regularNodes, ...dynamicGroupNodes]
-  }, [nodes, selectedNodeId, connectedNodeIds, handleNodeClick, calculateGroupBounds])
+  }, [nodes, selectedNodeId, connectedNodeIds, handleNodeClick, groupBounds])
 
   const edgesForFlow = useMemo(() => {
     return edges.map((edge) => {
