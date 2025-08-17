@@ -1,0 +1,28 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "es2015",
+    "module": "esnext",
+    "lib": ["es2020", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./"],
+      "@bps-payment-monitor/data-access": ["libs/bps-payment-monitor/bps-payment-monitor-data-access/src/index.ts"],
+      "@bps-payment-monitor/ui": ["libs/bps-payment-monitor/bps-payment-monitor-ui/src/index.ts"],
+      "@bps-payment-monitor/utils": ["libs/bps-payment-monitor/bps-payment-monitor-utils/src/index.ts"],
+      "@bps-payment-monitor/feature-payment-monitor-layout": [
+        "libs/bps-payment-monitor/features/feature-payment-monitor-layout/src/index.ts"
+      ]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

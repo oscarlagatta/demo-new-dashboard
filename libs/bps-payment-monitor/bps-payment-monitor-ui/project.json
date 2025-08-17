@@ -1,0 +1,35 @@
+{
+  "name": "bps-payment-monitor-ui",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/bps-payment-monitor/bps-payment-monitor-ui/src",
+  "projectType": "library",
+  "tags": ["scope:bps-payment-monitor", "type:ui"],
+  "targets": {
+    "build": {
+      "executor": "@nx/rollup:rollup",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/bps-payment-monitor/bps-payment-monitor-ui",
+        "tsConfig": "libs/bps-payment-monitor/bps-payment-monitor-ui/tsconfig.lib.json",
+        "project": "libs/bps-payment-monitor/bps-payment-monitor-ui/package.json",
+        "entryFile": "libs/bps-payment-monitor/bps-payment-monitor-ui/src/index.ts",
+        "external": ["react/jsx-runtime"],
+        "rollupConfig": "@nx/react/plugins/bundle-rollup"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["libs/bps-payment-monitor/bps-payment-monitor-ui/**/*.{ts,tsx,js,jsx}"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "libs/bps-payment-monitor/bps-payment-monitor-ui/jest.config.ts"
+      }
+    }
+  }
+}
