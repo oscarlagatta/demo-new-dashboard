@@ -13,6 +13,9 @@
     "test": "nx test"
   },
   "dependencies": {
+    "@bps-payment-monitor/data-access": "latest",
+    "@bps-payment-monitor/ui": "latest",
+    "@bps-payment-monitor/utils": "latest",
     "@hookform/resolvers": "^3.9.1",
     "@jest/globals": "latest",
     "@nx/devkit": "latest",

@@ -18,15 +18,15 @@ import {
 import "@xyflow/react/dist/style.css"
 import { Loader2, RefreshCw, AlertCircle } from "lucide-react"
 
-import { useGetSplunk } from "@/hooks/use-get-splunk"
-import { initialNodes, initialEdges } from "@/lib/flow-data"
-import CustomNode from "./custom-node"
-import SectionBackgroundNode from "./section-background-node"
-import { computeTrafficStatusColors } from "@/lib/traffic-status-utils"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { TransactionDetailsTable } from "./transaction-details-table"
-import { useTransactionSearchContext } from "./transaction-search-provider"
+import { useGetSplunk } from "@bps-payment-monitor/data-access"
+import { initialNodes, initialEdges } from "@bps-payment-monitor/utils"
+import CustomNode from "@bps-payment-monitor/ui"
+import SectionBackgroundNode from "@bps-payment-monitor/ui"
+import { computeTrafficStatusColors } from "@bps-payment-monitor/utils"
+import { Button } from "@bps-payment-monitor/ui"
+import { Skeleton } from "@bps-payment-monitor/ui"
+import { TransactionDetailsTable } from "@bps-payment-monitor/ui"
+import { useTransactionSearchContext } from "@bps-payment-monitor/ui"
 
 const nodeTypes: NodeTypes = {
   custom: CustomNode,
