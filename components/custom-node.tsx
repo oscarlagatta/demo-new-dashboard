@@ -4,17 +4,17 @@ import type React from "react"
 
 import { memo, useMemo } from "react"
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react"
-import { Card, CardHeader, CardTitle, CardContent } from "@bps-payment-monitor/ui"
-import { useGetSplunk } from "@bps-payment-monitor/data-access"
-import { computeTrendColors, getTrendColorClass, type TrendColor } from "@bps-payment-monitor/utils"
+import { Card, CardHeader, CardTitle, CardContent } from "./ui/card"
+import { useGetSplunk } from "../hooks/use-get-splunk"
+import { computeTrendColors, getTrendColorClass, type TrendColor } from "../lib/trend-color-utils"
 import {
   computeTrafficStatusColors,
   getTrafficStatusColorClass,
   type TrafficStatusColor,
-} from "@bps-payment-monitor/utils"
-import { LoadingButton } from "@bps-payment-monitor/ui"
-import { CardLoadingSkeleton } from "@bps-payment-monitor/ui"
-import { useTransactionSearchContext } from "@bps-payment-monitor/ui"
+} from "../lib/traffic-status-utils"
+import { LoadingButton } from "./loading-button"
+import { CardLoadingSkeleton } from "./loading-skeleton"
+import { useTransactionSearchContext } from "./transaction-search-provider"
 
 type CustomNodeData = {
   title: string

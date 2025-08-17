@@ -1,48 +1,42 @@
 "use client"
 
-import { FlowDiagram } from "@/components/flow-diagram"
-import PaymentSearchBox from "@/components/payment-search-box"
-import { TransactionSearchProvider } from "@/components/transaction-search-provider"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { Settings, Home } from "lucide-react"
+import { FlowDiagram } from "../components/flow-diagram"
+import PaymentSearchBox from "../components/payment-search-box"
+import { TransactionSearchProvider } from "../components/transaction-search-provider"
 
 export default function HomePage() {
   return (
     <TransactionSearchProvider>
-      <div className="h-screen w-screen flex flex-col bg-gray-50 overflow-hidden">
-        {/* Navigation Header */}
-        <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-2">
+      <div className="min-h-screen bg-gray-50">
+        {/* Navigation */}
+        <nav className="bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold text-gray-900">Payment Dashboard</h1>
             <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-semibold text-gray-900">Payment Dashboard</h1>
-              <div className="flex items-center space-x-2">
-                <Button variant="ghost" size="sm" className="bg-blue-50 text-blue-600">
-                  <Home className="w-4 h-4 mr-2" />
-                  Dashboard
-                </Button>
-                <Link href="/node-manager">
-                  <Button variant="ghost" size="sm">
-                    <Settings className="w-4 h-4 mr-2" />
-                    Node Manager
-                  </Button>
-                </Link>
-              </div>
+              <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                Dashboard
+              </button>
+              <a
+                href="/node-manager"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+              >
+                Node Manager
+              </a>
             </div>
           </div>
-        </div>
+        </nav>
 
-        {/* Header section with search */}
-        <div className="flex-shrink-0">
-          <PaymentSearchBox />
-        </div>
+        <div className="p-6">
+          {/* Header section with search */}
+          <div className="mb-6">
+            <PaymentSearchBox />
+          </div>
 
-        {/* Main diagram section */}
-        <main className="flex-grow p-4 sm:p-6 lg:p-8 pt-0">
-          <div className="bg-white rounded-lg border shadow-sm h-full w-full">
+          {/* Main diagram section */}
+          <div className="bg-white rounded-lg border shadow-sm h-[calc(100vh-200px)]">
             <FlowDiagram />
           </div>
-        </main>
+        </div>
       </div>
     </TransactionSearchProvider>
   )
