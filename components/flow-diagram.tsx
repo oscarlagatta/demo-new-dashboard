@@ -16,7 +16,7 @@ import {
   useStore,
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
-import { Loader2, RefreshCw, AlertCircle } from "lucide-react"
+import { Loader2, RefreshCw, AlertCircle, Clock } from "lucide-react"
 
 import { useGetSplunk } from "@/hooks/use-get-splunk"
 import { loadFlowData } from "@/lib/flow-data-loader"
@@ -27,6 +27,8 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TransactionDetailsTable } from "./transaction-details-table"
 import { useTransactionSearchContext } from "./transaction-search-provider"
+import { useTimingData } from "@/hooks/use-timing-data"
+import { TimingOverlay } from "./timing-overlay"
 
 const nodeTypes: NodeTypes = {
   custom: CustomNode,
@@ -50,11 +52,14 @@ const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
   const [connectedEdgeIds, setConnectedEdgeIds] = useState<Set<string>>(new Set())
   const [lastRefetch, setLastRefetch] = useState<Date | null>(null)
   const [isLoadingFlowData, setIsLoadingFlowData] = useState(true)
+  const [showTimingOverlay, setShowTimingOverlay] = useState(false)
+  const [timingMode, setTimingMode] = useState(false)
 
   const width = useStore((state) => state.width)
   const height = useStore((state) => state.height)
 
   const { data: splunkData, isLoading, isError, error, refetch, isFetching, isSuccess } = useGetSplunk()
+  const { data: timingData, isLoading: isLoadingTiming } = useTimingData(timingMode)
 
   useEffect(() => {
     const loadData = async () => {
@@ -112,11 +117,13 @@ const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
         setSelectedNodeId(null)
         setConnectedNodeIds(new Set())
         setConnectedEdgeIds(new Set())
+        setShowTimingOverlay(false)
       } else {
         const { connectedNodes, connectedEdges } = findConnections(nodeId)
         setSelectedNodeId(nodeId)
         setConnectedNodeIds(connectedNodes)
         setConnectedEdgeIds(connectedEdges)
+        setShowTimingOverlay(true)
       }
     },
     [selectedNodeId, findConnections, isLoading, isFetching],
@@ -221,12 +228,18 @@ const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
       const isConnected = connectedNodeIds.has(node.id)
       const isDimmed = selectedNodeId && !isSelected && !isConnected
 
+      const nodeTimingData = timingData?.nodes.find((t) => t.nodeId === node.id)
+      const hasTimingIssue = nodeTimingData?.status === "warning" || nodeTimingData?.status === "critical"
+
       const nodeData = {
         ...node.data,
         isSelected,
         isConnected,
         isDimmed,
         onClick: handleNodeClick,
+        timingData: nodeTimingData,
+        showTiming: timingMode,
+        hasTimingIssue,
       }
 
       if (node.parentId) {
@@ -242,7 +255,7 @@ const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
         data: nodeData,
       }
     })
-  }, [nodes, selectedNodeId, connectedNodeIds, handleNodeClick])
+  }, [nodes, selectedNodeId, connectedNodeIds, handleNodeClick, timingData, timingMode])
 
   const edgesForFlow = useMemo(() => {
     return edges.map((edge) => {
@@ -263,12 +276,12 @@ const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
   }, [edges, connectedEdgeIds, selectedNodeId])
 
   const renderDataPanel = () => {
-    if (isLoading) {
+    if (isLoading || isLoadingTiming) {
       return (
         <div className="space-y-3">
           <div className="flex items-center space-x-2">
             <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-            <span className="text-sm font-medium text-blue-600">Loading Splunk data...</span>
+            <span className="text-sm font-medium text-blue-600">Loading data...</span>
           </div>
           <div className="space-y-2">
             <Skeleton className="h-4 w-32" />
@@ -287,7 +300,7 @@ const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
             <AlertCircle className="h-4 w-4" />
             <span className="text-sm font-medium">Error loading data</span>
           </div>
-          <p className="text-sm text-red-500">{error?.message || "Failed to load Splunk data"}</p>
+          <p className="text-sm text-red-500">{error?.message || "Failed to load data"}</p>
           <Button
             onClick={handleRefetch}
             size="sm"
@@ -376,6 +389,16 @@ const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
     <div className="h-full w-full relative">
       {/* Refresh Data Button - Icon only, docked top-right */}
       <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        <Button
+          onClick={() => setTimingMode(!timingMode)}
+          variant={timingMode ? "default" : "outline"}
+          size="sm"
+          className="h-8 px-3 shadow-sm"
+          title="Toggle timing mode"
+        >
+          <Clock className="h-4 w-4 mr-1" />
+          Timing
+        </Button>
         {lastRefetch && !isFetching && (
           <span className="text-xs text-muted-foreground">Last updated: {lastRefetch.toLocaleTimeString()}</span>
         )}
@@ -437,6 +460,20 @@ const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Timing Overlay */}
+      {selectedNodeId && showTimingOverlay && timingMode && (
+        <TimingOverlay
+          nodeId={selectedNodeId}
+          timingData={timingData?.nodes.find((t) => t.nodeId === selectedNodeId)}
+          edgeTimingData={timingData?.edges.filter((e) =>
+            edges.some(
+              (edge) => (edge.source === selectedNodeId || edge.target === selectedNodeId) && edge.id === e.edgeId,
+            ),
+          )}
+          onClose={() => setShowTimingOverlay(false)}
+        />
       )}
     </div>
   )
