@@ -1,0 +1,85 @@
+{
+  "nodes": [
+    {
+      "id": "1",
+      "data": { "label": "Payment Gateway" },
+      "class": "origination",
+      "title": "Payment Gateway",
+      "subtext": "Entry point for payments"
+    },
+    {
+      "id": "2",
+      "data": { "label": "Fraud Detection" },
+      "class": "payment validation and routing",
+      "title": "Fraud Detection",
+      "subtext": "Risk assessment system"
+    },
+    {
+      "id": "3",
+      "data": { "label": "Payment Router" },
+      "class": "payment validation and routing",
+      "title": "Payment Router",
+      "subtext": "Route optimization"
+    },
+    {
+      "id": "4",
+      "data": { "label": "Message Queue" },
+      "class": "middleware",
+      "title": "Message Queue",
+      "subtext": "Async processing"
+    },
+    {
+      "id": "5",
+      "data": { "label": "Transaction Processor" },
+      "class": "payment processing, sanctions and investigation",
+      "title": "Transaction Processor",
+      "subtext": "Core processing engine"
+    },
+    {
+      "id": "6",
+      "data": { "label": "Sanctions Check" },
+      "class": "payment processing, sanctions and investigation",
+      "title": "Sanctions Check",
+      "subtext": "Compliance verification"
+    },
+    {
+      "id": "7",
+      "data": { "label": "Settlement Engine" },
+      "class": "payment processing, sanctions and investigation",
+      "title": "Settlement Engine",
+      "subtext": "Final settlement"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1-2",
+      "source": "1",
+      "target": "2"
+    },
+    {
+      "id": "e2-3",
+      "source": "2",
+      "target": "3"
+    },
+    {
+      "id": "e3-4",
+      "source": "3",
+      "target": "4"
+    },
+    {
+      "id": "e4-5",
+      "source": "4",
+      "target": "5"
+    },
+    {
+      "id": "e5-6",
+      "source": "5",
+      "target": "6"
+    },
+    {
+      "id": "e6-7",
+      "source": "6",
+      "target": "7"
+    }
+  ]
+}

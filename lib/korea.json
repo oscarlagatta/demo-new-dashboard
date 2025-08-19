@@ -1,0 +1,64 @@
+{
+  "nodes": [
+    { "id": "11554", "data": { "label": "Swift Gateway" },                "class": "origination" },
+    { "id": "41107", "data": { "label": "CashPro Mobile" },               "class": "origination" },
+    { "id": "71800", "data": { "label": "CPO API Gateway" },              "class": "origination" },
+    { "id": "54071", "data": { "label": "B2Bi" },                         "class": "origination" },
+    { "id": "11697", "data": { "label": "CashPro" },                      "class": "origination" },
+
+    { "id": "512",   "data": { "label": "Swift Alliance" },               "class": "payment validation and routing" },
+    { "id": "63985", "data": { "label": "AMH" },                          "class": "payment validation and routing" },
+    { "id": "70199", "data": { "label": "GPO" },                          "class": "payment validation and routing" },
+    { "id": "28960", "data": { "label": "CashPro Global Payments" },      "class": "payment validation and routing" },
+    { "id": "47221", "data": { "label": "AWS PAY" },                      "class": "payment validation and routing" },
+    { "id": "15227", "data": { "label": "FRP US" },                       "class": "payment validation and routing" },
+    { "id": "51511", "data": { "label": "FRP UK" },                       "class": "payment validation and routing" },
+    { "id": "834",   "data": { "label": "ECS" },                          "class": "payment validation and routing" },
+    { "id": "31427", "data": { "label": "PSH" },                          "class": "payment validation and routing" },
+
+    { "id": "60745", "data": { "label": "RPI UK" },                       "class": "middleware" },
+    { "id": "14681", "data": { "label": "MRP UK" },                       "class": "middleware" },
+    { "id": "61295", "data": { "label": "KOFAX" },                        "class": "middleware" },
+    { "id": "50393", "data": { "label": "TIBCO" },                        "class": "middleware" },
+    { "id": "4679",  "data": { "label": "MRP US" },                       "class": "middleware" },
+
+    { "id": "515",   "data": { "label": "GBS" },                          "class": "payment processing, sanctions and investigation" },
+    { "id": "71392", "data": { "label": "BOK Wire Terminal" },            "class": "payment processing, sanctions and investigation" },
+    { "id": "20119", "data": { "label": "Korea KFTC Interface System" },  "class": "payment processing, sanctions and investigation" },
+    { "id": "44669", "data": { "label": "Korea Sweeping System" },        "class": "payment processing, sanctions and investigation" },
+
+    { "id": "bg-origination", "type": "background", "label": "Origination & Receipt" },
+    { "id": "bg-validation",  "type": "background", "label": "Validation & Enrichment" },
+    { "id": "bg-middleware",  "type": "background", "label": "Payment Processing / Middleware" },
+    { "id": "bg-processing",  "type": "background", "label": "Clearing / Settlement" }
+  ],
+
+  "edges": [
+    { "id": "11554-512",   "source": "11554", "target": "512",     "type": "step" },
+
+    { "id": "41207-28960", "source": "41107", "target": "28960",   "type": "step" },
+    { "id": "71800-28960", "source": "71800", "target": "28960",   "type": "step" },
+    { "id": "54071-834",   "source": "54071", "target": "834",     "type": "step" },
+    { "id": "11697-47221", "source": "11697", "target": "47221",   "type": "step" },
+
+    { "id": "512-70199",   "source": "512",   "target": "70199",   "type": "step" },
+    { "id": "70199-14681", "source": "70199", "target": "14681",   "type": "step" },
+    { "id": "70199-60745", "source": "70199", "target": "60745",   "type": "step" },
+
+    { "id": "28960-15227", "source": "28960", "target": "15227",   "type": "step" },
+    { "id": "28960-51511", "source": "28960", "target": "51511",   "type": "step" },
+
+    { "id": "15227-834",   "source": "15227", "target": "834",     "type": "step" },
+    { "id": "51511-4679",  "source": "51511", "target": "4679",    "type": "step" },
+    { "id": "47221-834",   "source": "47221", "target": "834",     "type": "step" },
+
+    { "id": "834-31427",   "source": "834",   "target": "31427",   "type": "step" },
+    { "id": "31427-4679",  "source": "31427", "target": "4679",    "type": "step" },
+
+    { "id": "4679-20119",  "source": "4679",  "target": "20119",   "type": "step" },
+    { "id": "4679-515",    "source": "4679",  "target": "515",     "type": "step" },
+
+    { "id": "515-44669",   "source": "515",   "target": "44669",   "type": "step" },
+    { "id": "14681-71392", "source": "14681", "target": "71392",   "type": "step" }
+  ]
+}

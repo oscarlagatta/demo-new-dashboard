@@ -1,6 +1,4 @@
 "use client"
-
-import type React from "react"
 import { useState, useCallback, useEffect, useMemo } from "react"
 import {
   ReactFlow,
@@ -12,24 +10,23 @@ import {
   type Node,
   type Edge,
   type OnConnect,
-  type OnNodesChange,
-  type OnEdgesChange,
   MarkerType,
   ReactFlowProvider,
   type NodeTypes,
   useStore,
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Loader2, RefreshCw, AlertCircle } from 'lucide-react'
+import { Loader2, RefreshCw, AlertCircle } from "lucide-react"
 
 import { useGetSplunk } from "@/hooks/use-get-splunk"
-import { initialNodes, initialEdges, type AppNode } from "@/lib/flow-data"
+import { loadFlowData } from "@/lib/flow-data-loader"
 import CustomNode from "./custom-node"
 import SectionBackgroundNode from "./section-background-node"
 import { computeTrafficStatusColors } from "@/lib/traffic-status-utils"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { TransactionDetailsTable } from "./transaction-details-table"
+import { useTransactionSearchContext } from "./transaction-search-provider"
 
 const nodeTypes: NodeTypes = {
   custom: CustomNode,
@@ -40,73 +37,100 @@ const SECTION_IDS = ["bg-origination", "bg-validation", "bg-middleware", "bg-pro
 const SECTION_WIDTH_PROPORTIONS = [0.2, 0.2, 0.25, 0.35]
 const GAP_WIDTH = 16
 
-const Flow = () => {
-  const [nodes, setNodes] = useState<Node[]>(initialNodes)
-  const [edges, setEdges] = useState<Edge[]>(initialEdges)
+interface FlowProps {
+  flowDataFile?: string
+}
+
+const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
+  const { showTableView } = useTransactionSearchContext()
+  const [nodes, setNodes] = useState<Node[]>([])
+  const [edges, setEdges] = useState<Edge[]>([])
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [connectedNodeIds, setConnectedNodeIds] = useState<Set<string>>(new Set())
   const [connectedEdgeIds, setConnectedEdgeIds] = useState<Set<string>>(new Set())
-  
+  const [lastRefetch, setLastRefetch] = useState<Date | null>(null)
+  const [isLoadingFlowData, setIsLoadingFlowData] = useState(true)
+
   const width = useStore((state) => state.width)
   const height = useStore((state) => state.height)
 
-  // Add Splunk data fetching with enhanced loading states
-  const { 
-    data: splunkData, 
-    isLoading, 
-    isError, 
-    error, 
-    refetch, 
-    isFetching,
-    isSuccess 
-  } = useGetSplunk()
+  const { data: splunkData, isLoading, isError, error, refetch, isFetching, isSuccess } = useGetSplunk()
 
-  // Function to find connected nodes and edges
-  const findConnections = useCallback((nodeId: string) => {
-    const connectedNodes = new Set<string>()
-    const connectedEdges = new Set<string>()
-    
-    edges.forEach(edge => {
-      if (edge.source === nodeId || edge.target === nodeId) {
-        connectedEdges.add(edge.id)
-        if (edge.source === nodeId) {
-          connectedNodes.add(edge.target)
-        }
-        if (edge.target === nodeId) {
-          connectedNodes.add(edge.source)
-        }
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoadingFlowData(true)
+      try {
+        const { nodes: loadedNodes, edges: loadedEdges } = await loadFlowData(flowDataFile)
+        setNodes(loadedNodes)
+        setEdges(loadedEdges)
+      } catch (error) {
+        console.error("Failed to load flow data:", error)
+      } finally {
+        setIsLoadingFlowData(false)
       }
-    })
-    
-    return { connectedNodes, connectedEdges }
-  }, [edges])
-
-  // Handle node click
-  const handleNodeClick = useCallback((nodeId: string) => {
-    if (isLoading || isFetching) return // Prevent interaction during loading
-    
-    if (selectedNodeId === nodeId) {
-      // Clicking the same node deselects it
-      setSelectedNodeId(null)
-      setConnectedNodeIds(new Set())
-      setConnectedEdgeIds(new Set())
-    } else {
-      // Select new node and find its connections
-      const { connectedNodes, connectedEdges } = findConnections(nodeId)
-      setSelectedNodeId(nodeId)
-      setConnectedNodeIds(connectedNodes)
-      setConnectedEdgeIds(connectedEdges)
     }
-  }, [selectedNodeId, findConnections, isLoading, isFetching])
 
-  // Get connected system names for display
+    loadData()
+  }, [flowDataFile])
+
+  const handleRefetch = async () => {
+    try {
+      await refetch()
+      setLastRefetch(new Date())
+    } catch (error) {
+      console.error("Refetch failed:", error)
+    }
+  }
+
+  const findConnections = useCallback(
+    (nodeId: string) => {
+      const connectedNodes = new Set<string>()
+      const connectedEdges = new Set<string>()
+
+      edges.forEach((edge) => {
+        if (edge.source === nodeId || edge.target === nodeId) {
+          connectedEdges.add(edge.id)
+          if (edge.source === nodeId) {
+            connectedNodes.add(edge.target)
+          }
+          if (edge.target === nodeId) {
+            connectedNodes.add(edge.source)
+          }
+        }
+      })
+
+      return { connectedNodes, connectedEdges }
+    },
+    [edges],
+  )
+
+  const handleNodeClick = useCallback(
+    (nodeId: string) => {
+      if (isLoading || isFetching) return
+
+      if (selectedNodeId === nodeId) {
+        setSelectedNodeId(null)
+        setConnectedNodeIds(new Set())
+        setConnectedEdgeIds(new Set())
+      } else {
+        const { connectedNodes, connectedEdges } = findConnections(nodeId)
+        setSelectedNodeId(nodeId)
+        setConnectedNodeIds(connectedNodes)
+        setConnectedEdgeIds(connectedEdges)
+      }
+    },
+    [selectedNodeId, findConnections, isLoading, isFetching],
+  )
+
   const getConnectedSystemNames = useCallback(() => {
     if (!selectedNodeId) return []
-    
-    return Array.from(connectedNodeIds).map(nodeId => {
-      const node = nodes.find(n => n.id === nodeId)
-      return node?.data?.title || nodeId
-    }).sort()
+
+    return Array.from(connectedNodeIds)
+      .map((nodeId) => {
+        const node = nodes.find((n) => n.id === nodeId)
+        return node?.data?.title || nodeId
+      })
+      .sort()
   }, [selectedNodeId, connectedNodeIds, nodes])
 
   useEffect(() => {
@@ -119,18 +143,17 @@ const Flow = () => {
         const newNodes = [...currentNodes]
         const sectionDimensions: Record<string, { x: number; width: number }> = {}
 
-        // first pass: update background nodes and store their new dimensions
         for (let i = 0; i < SECTION_IDS.length; i++) {
           const sectionId = SECTION_IDS[i]
           const nodeIndex = newNodes.findIndex((n) => n.id === sectionId)
 
           if (nodeIndex !== -1) {
             const sectionWidth = availableWidth * SECTION_WIDTH_PROPORTIONS[i]
-            sectionDimensions[sectionId] = {x: currentX, width: sectionWidth}
+            sectionDimensions[sectionId] = { x: currentX, width: sectionWidth }
 
             newNodes[nodeIndex] = {
               ...newNodes[nodeIndex],
-              position: {x: currentX, y: 0},
+              position: { x: currentX, y: 0 },
               style: {
                 ...newNodes[nodeIndex].style,
                 width: `${sectionWidth}px`,
@@ -141,23 +164,20 @@ const Flow = () => {
           }
         }
 
-        // second pass: update child nodes based on their parent's new dimensions
         for (let i = 0; i < newNodes.length; i++) {
           const node = newNodes[i]
           if (node.parentId && sectionDimensions[node.parentId]) {
             const parentDimensions = sectionDimensions[node.parentId]
 
-            const originalNode = initialNodes.find((n) => n.id === node.id)
-            const originalParent = initialNodes.find((n) => n.id === node.parentId)
+            const originalNode = currentNodes.find((n) => n.id === node.id)
+            const originalParent = currentNodes.find((n) => n.id === node.parentId)
 
             if (originalNode && originalParent && originalParent.style?.width) {
               const originalParentWidth = Number.parseFloat(originalParent.style.width as string)
               const originalRelativeXOffset = originalNode.position.x - originalParent.position.x
 
               const newAbsoluteX =
-                  parentDimensions.x +
-                  (originalRelativeXOffset / originalParentWidth) *
-                  parentDimensions.width
+                parentDimensions.x + (originalRelativeXOffset / originalParentWidth) * parentDimensions.width
 
               newNodes[i] = {
                 ...node,
@@ -170,35 +190,29 @@ const Flow = () => {
           }
         }
         return newNodes
-      });
+      })
     }
-  }, [width, height]);
+  }, [width, height])
 
-  const onNodesChange: OnNodesChange = useCallback(
-      (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
-      [setNodes],
-  )
+  const onNodesChange = useCallback((changes) => setNodes((nds) => applyNodeChanges(changes, nds)), [setNodes])
 
-  const onEdgesChange: OnEdgesChange = useCallback(
-      (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
-      [setEdges],
-  )
+  const onEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), [setEdges])
 
   const onConnect: OnConnect = useCallback(
-      (connection) =>
-          setEdges((eds) =>
-              addEdge(
-                  {
-                    ...connection,
-                    type: "smoothstep",
-                    markerStart: { type: MarkerType.ArrowClosed, color: "#6b7280" },
-                    markerEnd: { type: MarkerType.ArrowClosed, color: "#6b7280" },
-                    style: { strokeWidth: 2, stroke: "#6b7280" },
-                  },
-                  eds,
-              ),
-          ),
-      [setEdges],
+    (connection) =>
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...connection,
+            type: "smoothstep",
+            markerStart: { type: MarkerType.ArrowClosed, color: "#6b7280" },
+            markerEnd: { type: MarkerType.ArrowClosed, color: "#6b7280" },
+            style: { strokeWidth: 2, stroke: "#6b7280" },
+          },
+          eds,
+        ),
+      ),
+    [setEdges],
   )
 
   const nodesForFlow = useMemo(() => {
@@ -206,41 +220,41 @@ const Flow = () => {
       const isSelected = selectedNodeId === node.id
       const isConnected = connectedNodeIds.has(node.id)
       const isDimmed = selectedNodeId && !isSelected && !isConnected
-      
-      let nodeData = {
+
+      const nodeData = {
         ...node.data,
         isSelected,
         isConnected,
         isDimmed,
-        onClick: handleNodeClick
+        onClick: handleNodeClick,
       }
-      
+
       if (node.parentId) {
         const { parentId, ...rest } = node
-        return { 
-          ...rest, 
+        return {
+          ...rest,
           parentNode: parentId,
-          data: nodeData
+          data: nodeData,
         }
       }
-      return { 
-        ...node as Node, 
-        data: nodeData
+      return {
+        ...(node as Node),
+        data: nodeData,
       }
     })
   }, [nodes, selectedNodeId, connectedNodeIds, handleNodeClick])
 
   const edgesForFlow = useMemo(() => {
-    return edges.map(edge => {
+    return edges.map((edge) => {
       const isConnected = connectedEdgeIds.has(edge.id)
       const isDimmed = selectedNodeId && !isConnected
-      
+
       return {
         ...edge,
         style: {
           ...edge.style,
           strokeWidth: isConnected ? 3 : 2,
-          stroke: isConnected ? '#1d4ed8' : isDimmed ? '#d1d5db' : '#6b7280',
+          stroke: isConnected ? "#1d4ed8" : isDimmed ? "#d1d5db" : "#6b7280",
           opacity: isDimmed ? 0.3 : 1,
         },
         animated: isConnected,
@@ -273,15 +287,13 @@ const Flow = () => {
             <AlertCircle className="h-4 w-4" />
             <span className="text-sm font-medium">Error loading data</span>
           </div>
-          <p className="text-sm text-red-500">
-            {error?.message || 'Failed to load Splunk data'}
-          </p>
-          <Button 
-            onClick={() => refetch()} 
-            size="sm" 
+          <p className="text-sm text-red-500">{error?.message || "Failed to load Splunk data"}</p>
+          <Button
+            onClick={handleRefetch}
+            size="sm"
             variant="outline"
             disabled={isFetching}
-            className="w-full"
+            className="w-full border-red-200 hover:border-red-300 hover:bg-red-50 bg-transparent"
           >
             {isFetching ? (
               <>
@@ -291,7 +303,7 @@ const Flow = () => {
             ) : (
               <>
                 <RefreshCw className="mr-2 h-3 w-3" />
-                Retry
+                Retry Connection
               </>
             )}
           </Button>
@@ -304,18 +316,29 @@ const Flow = () => {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-medium mb-1">Traffic Status Summary:</h4>
-            {isFetching && (
-              <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
-            )}
+            <div className="flex items-center gap-1">
+              {isFetching && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
+              <Button
+                onClick={handleRefetch}
+                size="sm"
+                variant="ghost"
+                disabled={isFetching}
+                className="h-5 w-5 p-0 hover:bg-blue-50"
+                title="Refresh data"
+              >
+                <RefreshCw className={`h-3 w-3 ${isFetching ? "animate-spin" : ""}`} />
+              </Button>
+            </div>
           </div>
           <div className="text-xs bg-gray-50 p-2 rounded">
             {Object.entries(computeTrafficStatusColors(splunkData)).map(([aitNum, color]) => (
               <div key={aitNum} className="flex justify-between">
                 <span>AIT {aitNum}:</span>
-                <span className={`px-1 rounded text-white ${
-                  color === 'green' ? 'bg-green-500' : 
-                  color === 'red' ? 'bg-red-500' : 'bg-gray-400'
-                }`}>
+                <span
+                  className={`px-1 rounded text-white ${
+                    color === "green" ? "bg-green-500" : color === "red" ? "bg-red-500" : "bg-gray-400"
+                  }`}
+                >
                   {color}
                 </span>
               </div>
@@ -334,25 +357,39 @@ const Flow = () => {
     return null
   }
 
+  if (showTableView) {
+    return <TransactionDetailsTable />
+  }
+
+  if (isLoadingFlowData) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+          <span className="text-sm font-medium text-blue-600">Loading flow diagram...</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="h-full w-full relative">
-      {/* Enhanced Splunk Data Display Panel */}
-      <div className="absolute top-4 right-4 z-10 max-w-md max-h-96 overflow-auto bg-white border rounded-lg shadow-lg p-4">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold">Splunk Data Analysis</h3>
-          {!isLoading && !isError && (
-            <Button 
-              onClick={() => refetch()} 
-              size="sm" 
-              variant="ghost"
-              disabled={isFetching}
-              className="h-6 w-6 p-0"
-            >
-              <RefreshCw className={`h-3 w-3 ${isFetching ? 'animate-spin' : ''}`} />
-            </Button>
-          )}
-        </div>
-        {renderDataPanel()}
+      {/* Refresh Data Button - Icon only, docked top-right */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        {lastRefetch && !isFetching && (
+          <span className="text-xs text-muted-foreground">Last updated: {lastRefetch.toLocaleTimeString()}</span>
+        )}
+        <Button
+          onClick={handleRefetch}
+          disabled={isFetching}
+          variant="outline"
+          size="sm"
+          className="h-8 w-8 p-0 shadow-sm border-blue-200 hover:border-blue-300 hover:bg-blue-50 bg-white"
+          title="Refresh Splunk data"
+          aria-label="Refresh Splunk data"
+        >
+          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+        </Button>
       </div>
 
       <ReactFlow
@@ -364,7 +401,7 @@ const Flow = () => {
         nodeTypes={nodeTypes}
         proOptions={{ hideAttribution: true }}
         className="bg-white"
-        style={{background: '#eeeff3ff'}}
+        style={{ background: "#eeeff3ff" }}
         panOnDrag={false}
         elementsSelectable={false}
         minZoom={1}
@@ -373,18 +410,16 @@ const Flow = () => {
         <Controls />
         <Background gap={16} size={1} />
       </ReactFlow>
-      
-      {/* Enhanced Connected Systems Panel */}
+
+      {/* Selected panel */}
       {selectedNodeId && (
         <div className="absolute top-4 left-4 z-10 max-w-sm bg-white border rounded-lg shadow-lg p-4">
           <h3 className="text-sm font-semibold mb-2 text-gray-800">
-            Selected System: {nodes.find(n => n.id === selectedNodeId)?.data?.title}
+            Selected System: {nodes.find((n) => n.id === selectedNodeId)?.data?.title}
           </h3>
           <div className="space-y-2">
             <div>
-              <h4 className="text-xs font-medium text-gray-600 mb-1">
-                Connected Systems ({connectedNodeIds.size}):
-              </h4>
+              <h4 className="text-xs font-medium text-gray-600 mb-1">Connected Systems ({connectedNodeIds.size}):</h4>
               <div className="max-h-32 overflow-y-auto">
                 {getConnectedSystemNames().map((systemName, index) => (
                   <div key={index} className="text-xs text-gray-700 py-1 px-2 bg-blue-50 rounded mb-1">
@@ -407,21 +442,10 @@ const Flow = () => {
   )
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 3,
-    },
-  },
-})
-
-export function FlowDiagram() {
+export function FlowDiagram({ flowDataFile }: FlowProps) {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ReactFlowProvider>
-        <Flow />
-      </ReactFlowProvider>
-    </QueryClientProvider>
+    <ReactFlowProvider>
+      <Flow flowDataFile={flowDataFile} />
+    </ReactFlowProvider>
   )
 }

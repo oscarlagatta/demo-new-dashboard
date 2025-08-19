@@ -1,0 +1,68 @@
+{
+  "nodes": [
+    {
+      "id": "k1",
+      "data": { "label": "Korean Bank Interface" },
+      "class": "origination",
+      "title": "Korean Bank Interface",
+      "subtext": "Local bank integration"
+    },
+    {
+      "id": "k2",
+      "data": { "label": "KRW Validator" },
+      "class": "payment validation and routing",
+      "title": "KRW Validator",
+      "subtext": "Currency validation"
+    },
+    {
+      "id": "k3",
+      "data": { "label": "KFTC Router" },
+      "class": "payment validation and routing",
+      "title": "KFTC Router",
+      "subtext": "Korea Financial Telecom"
+    },
+    {
+      "id": "k4",
+      "data": { "label": "Korean Middleware" },
+      "class": "payment processing / middleware",
+      "title": "Korean Middleware",
+      "subtext": "Local processing layer"
+    },
+    {
+      "id": "k5",
+      "data": { "label": "BOK Settlement" },
+      "class": "clearing / settlement",
+      "title": "BOK Settlement",
+      "subtext": "Bank of Korea settlement"
+    },
+    {
+      "id": "k6",
+      "data": { "label": "Korean AML" },
+      "class": "clearing / settlement",
+      "title": "Korean AML",
+      "subtext": "Anti-money laundering"
+    }
+  ],
+  "edges": [
+    {
+      "id": "ek1-k2",
+      "source": "k1",
+      "target": "k2"
+    },
+    {
+      "id": "ek2-k3",
+      "source": "k2",
+      "target": "k3"
+    },
+    {
+      "id": "ek3-k4",
+      "source": "k3",
+      "target": "k4"
+    },
+    {
+      "id": "ek4-k5",
+      "source": "k4",
+      "target": ["k5", "k6"]
+    }
+  ]
+}
