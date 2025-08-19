@@ -95,3 +95,11 @@ export function FlowSidebar({ selectedFlow, onFlowChange, isCollapsed = false, o
 
 // Export the flow options for use in other components
 export { FLOW_OPTIONS }
+
+
+/*
+**Configuration-driven**: Add new flows by updating `FLOW_OPTIONS` array
+**Collapsible Interface**: Space-saving collapsed state with icon-only view
+**Visual Indicators**: Icons and descriptions for each flow type
+**Responsive Design**: Adapts layout based on collapsed state
+*/
