@@ -29,6 +29,7 @@ import { TransactionDetailsTable } from "./transaction-details-table"
 import { useTransactionSearchContext } from "./transaction-search-provider"
 import { useTimingData } from "@/hooks/use-timing-data"
 import { TimingOverlay } from "./timing-overlay"
+import { E2ETimingHeader } from "./e2e-timing-header"
 
 const nodeTypes: NodeTypes = {
   custom: CustomNode,
@@ -386,95 +387,100 @@ const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
   }
 
   return (
-    <div className="h-full w-full relative">
-      {/* Refresh Data Button - Icon only, docked top-right */}
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-        <Button
-          onClick={() => setTimingMode(!timingMode)}
-          variant={timingMode ? "default" : "outline"}
-          size="sm"
-          className="h-8 px-3 shadow-sm"
-          title="Toggle timing mode"
-        >
-          <Clock className="h-4 w-4 mr-1" />
-          Timing
-        </Button>
-        {lastRefetch && !isFetching && (
-          <span className="text-xs text-muted-foreground">Last updated: {lastRefetch.toLocaleTimeString()}</span>
-        )}
-        <Button
-          onClick={handleRefetch}
-          disabled={isFetching}
-          variant="outline"
-          size="sm"
-          className="h-8 w-8 p-0 shadow-sm border-blue-200 hover:border-blue-300 hover:bg-blue-50 bg-white"
-          title="Refresh Splunk data"
-          aria-label="Refresh Splunk data"
-        >
-          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-        </Button>
-      </div>
+    <div className="h-full w-full relative flex flex-col">
+      {timingMode && <E2ETimingHeader timingData={timingData} isLoading={isLoadingTiming} />}
 
-      <ReactFlow
-        nodes={nodesForFlow}
-        edges={edgesForFlow}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        nodeTypes={nodeTypes}
-        proOptions={{ hideAttribution: true }}
-        className="bg-white"
-        style={{ background: "#eeeff3ff" }}
-        panOnDrag={false}
-        elementsSelectable={false}
-        minZoom={1}
-        maxZoom={1}
-      >
-        <Controls />
-        <Background gap={16} size={1} />
-      </ReactFlow>
-
-      {/* Selected panel */}
-      {selectedNodeId && (
-        <div className="absolute top-4 left-4 z-10 max-w-sm bg-white border rounded-lg shadow-lg p-4">
-          <h3 className="text-sm font-semibold mb-2 text-gray-800">
-            Selected System: {nodes.find((n) => n.id === selectedNodeId)?.data?.title}
-          </h3>
-          <div className="space-y-2">
-            <div>
-              <h4 className="text-xs font-medium text-gray-600 mb-1">Connected Systems ({connectedNodeIds.size}):</h4>
-              <div className="max-h-32 overflow-y-auto">
-                {getConnectedSystemNames().map((systemName, index) => (
-                  <div key={index} className="text-xs text-gray-700 py-1 px-2 bg-blue-50 rounded mb-1">
-                    {systemName}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <button
-              onClick={() => handleNodeClick(selectedNodeId)}
-              className="text-xs text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
-              disabled={isLoading || isFetching}
-            >
-              Clear Selection
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Timing Overlay */}
-      {selectedNodeId && showTimingOverlay && timingMode && (
-        <TimingOverlay
-          nodeId={selectedNodeId}
-          timingData={timingData?.nodes.find((t) => t.nodeId === selectedNodeId)}
-          edgeTimingData={timingData?.edges.filter((e) =>
-            edges.some(
-              (edge) => (edge.source === selectedNodeId || edge.target === selectedNodeId) && edge.id === e.edgeId,
-            ),
+      {/* Main flow diagram container */}
+      <div className="flex-1 relative">
+        {/* Refresh Data Button - Icon only, docked top-right */}
+        <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+          <Button
+            onClick={() => setTimingMode(!timingMode)}
+            variant={timingMode ? "default" : "outline"}
+            size="sm"
+            className="h-8 px-3 shadow-sm"
+            title="Toggle timing mode"
+          >
+            <Clock className="h-4 w-4 mr-1" />
+            Timing
+          </Button>
+          {lastRefetch && !isFetching && (
+            <span className="text-xs text-muted-foreground">Last updated: {lastRefetch.toLocaleTimeString()}</span>
           )}
-          onClose={() => setShowTimingOverlay(false)}
-        />
-      )}
+          <Button
+            onClick={handleRefetch}
+            disabled={isFetching}
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0 shadow-sm border-blue-200 hover:border-blue-300 hover:bg-blue-50 bg-white"
+            title="Refresh Splunk data"
+            aria-label="Refresh Splunk data"
+          >
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
+
+        <ReactFlow
+          nodes={nodesForFlow}
+          edges={edgesForFlow}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          proOptions={{ hideAttribution: true }}
+          className="bg-white"
+          style={{ background: "#eeeff3ff" }}
+          panOnDrag={false}
+          elementsSelectable={false}
+          minZoom={1}
+          maxZoom={1}
+        >
+          <Controls />
+          <Background gap={16} size={1} />
+        </ReactFlow>
+
+        {/* Selected panel */}
+        {selectedNodeId && (
+          <div className="absolute top-4 left-4 z-10 max-w-sm bg-white border rounded-lg shadow-lg p-4">
+            <h3 className="text-sm font-semibold mb-2 text-gray-800">
+              Selected System: {nodes.find((n) => n.id === selectedNodeId)?.data?.title}
+            </h3>
+            <div className="space-y-2">
+              <div>
+                <h4 className="text-xs font-medium text-gray-600 mb-1">Connected Systems ({connectedNodeIds.size}):</h4>
+                <div className="max-h-32 overflow-y-auto">
+                  {getConnectedSystemNames().map((systemName, index) => (
+                    <div key={index} className="text-xs text-gray-700 py-1 px-2 bg-blue-50 rounded mb-1">
+                      {systemName}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={() => handleNodeClick(selectedNodeId)}
+                className="text-xs text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
+                disabled={isLoading || isFetching}
+              >
+                Clear Selection
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Timing Overlay */}
+        {selectedNodeId && showTimingOverlay && timingMode && (
+          <TimingOverlay
+            nodeId={selectedNodeId}
+            timingData={timingData?.nodes.find((t) => t.nodeId === selectedNodeId)}
+            edgeTimingData={timingData?.edges.filter((e) =>
+              edges.some(
+                (edge) => (edge.source === selectedNodeId || edge.target === selectedNodeId) && edge.id === e.edgeId,
+              ),
+            )}
+            onClose={() => setShowTimingOverlay(false)}
+          />
+        )}
+      </div>
     </div>
   )
 }
