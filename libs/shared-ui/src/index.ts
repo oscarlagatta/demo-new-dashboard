@@ -29,6 +29,7 @@ export * from "./lib/ui/navigation-menu"
 export * from "./lib/ui/breadcrumb"
 export * from "./lib/ui/pagination"
 export * from "./lib/ui/chart"
+export * from "./lib/ui/scroll-area" // Adding scroll area component export
 
 // Hooks
 export * from "./lib/hooks/use-mobile"

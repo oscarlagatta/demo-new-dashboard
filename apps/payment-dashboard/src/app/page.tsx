@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { FlowDiagram } from "@payment-org/flow-visualization"
-import { NavigationSidebar, FLOW_OPTIONS, NAVIGATION_OPTIONS } from "@payment-org/shared-ui"
+import { NavigationSidebar, FLOW_OPTIONS, NAVIGATION_OPTIONS } from "@payment-org/transaction-management"
 import { PaymentSearchBox } from "@payment-org/transaction-management"
 import { TransactionSearchProvider } from "@payment-org/transaction-management"
 import { Button } from "@payment-org/shared-ui"
