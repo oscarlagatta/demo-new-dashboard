@@ -16,7 +16,7 @@ import {
   useStore,
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
-import { Loader2, RefreshCw, AlertCircle, Clock } from "lucide-react"
+import { Loader2, RefreshCw, AlertCircle } from "lucide-react"
 
 import { useGetSplunk } from "@/hooks/use-get-splunk"
 import { loadFlowData } from "@/lib/flow-data-loader"
@@ -27,9 +27,6 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TransactionDetailsTable } from "./transaction-details-table"
 import { useTransactionSearchContext } from "./transaction-search-provider"
-import { useTimingData } from "@/hooks/use-timing-data"
-import { TimingOverlay } from "./timing-overlay"
-import { E2ETimingHeader } from "./e2e-timing-header"
 
 const nodeTypes: NodeTypes = {
   custom: CustomNode,
@@ -53,14 +50,11 @@ const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
   const [connectedEdgeIds, setConnectedEdgeIds] = useState<Set<string>>(new Set())
   const [lastRefetch, setLastRefetch] = useState<Date | null>(null)
   const [isLoadingFlowData, setIsLoadingFlowData] = useState(true)
-  const [showTimingOverlay, setShowTimingOverlay] = useState(false)
-  const [timingMode, setTimingMode] = useState(false)
 
   const width = useStore((state) => state.width)
   const height = useStore((state) => state.height)
 
   const { data: splunkData, isLoading, isError, error, refetch, isFetching, isSuccess } = useGetSplunk()
-  const { data: timingData, isLoading: isLoadingTiming } = useTimingData(timingMode)
 
   useEffect(() => {
     const loadData = async () => {
@@ -118,13 +112,11 @@ const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
         setSelectedNodeId(null)
         setConnectedNodeIds(new Set())
         setConnectedEdgeIds(new Set())
-        setShowTimingOverlay(false)
       } else {
         const { connectedNodes, connectedEdges } = findConnections(nodeId)
         setSelectedNodeId(nodeId)
         setConnectedNodeIds(connectedNodes)
         setConnectedEdgeIds(connectedEdges)
-        setShowTimingOverlay(true)
       }
     },
     [selectedNodeId, findConnections, isLoading, isFetching],
@@ -229,18 +221,12 @@ const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
       const isConnected = connectedNodeIds.has(node.id)
       const isDimmed = selectedNodeId && !isSelected && !isConnected
 
-      const nodeTimingData = timingData?.nodes.find((t) => t.nodeId === node.id)
-      const hasTimingIssue = nodeTimingData?.status === "warning" || nodeTimingData?.status === "critical"
-
       const nodeData = {
         ...node.data,
         isSelected,
         isConnected,
         isDimmed,
         onClick: handleNodeClick,
-        timingData: nodeTimingData,
-        showTiming: timingMode,
-        hasTimingIssue,
       }
 
       if (node.parentId) {
@@ -256,7 +242,7 @@ const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
         data: nodeData,
       }
     })
-  }, [nodes, selectedNodeId, connectedNodeIds, handleNodeClick, timingData, timingMode])
+  }, [nodes, selectedNodeId, connectedNodeIds, handleNodeClick])
 
   const edgesForFlow = useMemo(() => {
     return edges.map((edge) => {
@@ -277,12 +263,12 @@ const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
   }, [edges, connectedEdgeIds, selectedNodeId])
 
   const renderDataPanel = () => {
-    if (isLoading || isLoadingTiming) {
+    if (isLoading) {
       return (
         <div className="space-y-3">
           <div className="flex items-center space-x-2">
             <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-            <span className="text-sm font-medium text-blue-600">Loading data...</span>
+            <span className="text-sm font-medium text-blue-600">Loading Splunk data...</span>
           </div>
           <div className="space-y-2">
             <Skeleton className="h-4 w-32" />
@@ -301,7 +287,7 @@ const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
             <AlertCircle className="h-4 w-4" />
             <span className="text-sm font-medium">Error loading data</span>
           </div>
-          <p className="text-sm text-red-500">{error?.message || "Failed to load data"}</p>
+          <p className="text-sm text-red-500">{error?.message || "Failed to load Splunk data"}</p>
           <Button
             onClick={handleRefetch}
             size="sm"
@@ -387,100 +373,71 @@ const Flow = ({ flowDataFile = "api-data.json" }: FlowProps) => {
   }
 
   return (
-    <div className="h-full w-full relative flex flex-col">
-      {timingMode && <E2ETimingHeader timingData={timingData} isLoading={isLoadingTiming} />}
-
-      {/* Main flow diagram container */}
-      <div className="flex-1 relative">
-        {/* Refresh Data Button - Icon only, docked top-right */}
-        <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-          <Button
-            onClick={() => setTimingMode(!timingMode)}
-            variant={timingMode ? "default" : "outline"}
-            size="sm"
-            className="h-8 px-3 shadow-sm"
-            title="Toggle timing mode"
-          >
-            <Clock className="h-4 w-4 mr-1" />
-            Timing
-          </Button>
-          {lastRefetch && !isFetching && (
-            <span className="text-xs text-muted-foreground">Last updated: {lastRefetch.toLocaleTimeString()}</span>
-          )}
-          <Button
-            onClick={handleRefetch}
-            disabled={isFetching}
-            variant="outline"
-            size="sm"
-            className="h-8 w-8 p-0 shadow-sm border-blue-200 hover:border-blue-300 hover:bg-blue-50 bg-white"
-            title="Refresh Splunk data"
-            aria-label="Refresh Splunk data"
-          >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-          </Button>
-        </div>
-
-        <ReactFlow
-          nodes={nodesForFlow}
-          edges={edgesForFlow}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          nodeTypes={nodeTypes}
-          proOptions={{ hideAttribution: true }}
-          className="bg-white"
-          style={{ background: "#eeeff3ff" }}
-          panOnDrag={false}
-          elementsSelectable={false}
-          minZoom={1}
-          maxZoom={1}
+    <div className="h-full w-full relative">
+      {/* Refresh Data Button - Icon only, docked top-right */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        {lastRefetch && !isFetching && (
+          <span className="text-xs text-muted-foreground">Last updated: {lastRefetch.toLocaleTimeString()}</span>
+        )}
+        <Button
+          onClick={handleRefetch}
+          disabled={isFetching}
+          variant="outline"
+          size="sm"
+          className="h-8 w-8 p-0 shadow-sm border-blue-200 hover:border-blue-300 hover:bg-blue-50 bg-white"
+          title="Refresh Splunk data"
+          aria-label="Refresh Splunk data"
         >
-          <Controls />
-          <Background gap={16} size={1} />
-        </ReactFlow>
-
-        {/* Selected panel */}
-        {selectedNodeId && (
-          <div className="absolute top-4 left-4 z-10 max-w-sm bg-white border rounded-lg shadow-lg p-4">
-            <h3 className="text-sm font-semibold mb-2 text-gray-800">
-              Selected System: {nodes.find((n) => n.id === selectedNodeId)?.data?.title}
-            </h3>
-            <div className="space-y-2">
-              <div>
-                <h4 className="text-xs font-medium text-gray-600 mb-1">Connected Systems ({connectedNodeIds.size}):</h4>
-                <div className="max-h-32 overflow-y-auto">
-                  {getConnectedSystemNames().map((systemName, index) => (
-                    <div key={index} className="text-xs text-gray-700 py-1 px-2 bg-blue-50 rounded mb-1">
-                      {systemName}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <button
-                onClick={() => handleNodeClick(selectedNodeId)}
-                className="text-xs text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
-                disabled={isLoading || isFetching}
-              >
-                Clear Selection
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Timing Overlay */}
-        {selectedNodeId && showTimingOverlay && timingMode && (
-          <TimingOverlay
-            nodeId={selectedNodeId}
-            timingData={timingData?.nodes.find((t) => t.nodeId === selectedNodeId)}
-            edgeTimingData={timingData?.edges.filter((e) =>
-              edges.some(
-                (edge) => (edge.source === selectedNodeId || edge.target === selectedNodeId) && edge.id === e.edgeId,
-              ),
-            )}
-            onClose={() => setShowTimingOverlay(false)}
-          />
-        )}
+          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+        </Button>
       </div>
+
+      <ReactFlow
+        nodes={nodesForFlow}
+        edges={edgesForFlow}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        nodeTypes={nodeTypes}
+        proOptions={{ hideAttribution: true }}
+        className="bg-white"
+        style={{ background: "#eeeff3ff" }}
+        panOnDrag={false}
+        elementsSelectable={false}
+        minZoom={1}
+        maxZoom={1}
+      >
+        <Controls />
+        <Background gap={16} size={1} />
+      </ReactFlow>
+
+      {/* Selected panel */}
+      {selectedNodeId && (
+        <div className="absolute top-4 left-4 z-10 max-w-sm bg-white border rounded-lg shadow-lg p-4">
+          <h3 className="text-sm font-semibold mb-2 text-gray-800">
+            Selected System: {nodes.find((n) => n.id === selectedNodeId)?.data?.title}
+          </h3>
+          <div className="space-y-2">
+            <div>
+              <h4 className="text-xs font-medium text-gray-600 mb-1">Connected Systems ({connectedNodeIds.size}):</h4>
+              <div className="max-h-32 overflow-y-auto">
+                {getConnectedSystemNames().map((systemName, index) => (
+                  <div key={index} className="text-xs text-gray-700 py-1 px-2 bg-blue-50 rounded mb-1">
+                    {systemName}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={() => handleNodeClick(selectedNodeId)}
+              className="text-xs text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
+              disabled={isLoading || isFetching}
+            >
+              Clear Selection
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

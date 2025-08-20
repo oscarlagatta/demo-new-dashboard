@@ -1,0 +1,31 @@
+{
+  "name": "flow-visualization",
+  "projectType": "library",
+  "sourceRoot": "libs/flow-visualization/src",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/flow-visualization",
+        "main": "libs/flow-visualization/src/index.ts",
+        "tsConfig": "libs/flow-visualization/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["libs/flow-visualization/**/*.{ts,tsx,js,jsx}"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "libs/flow-visualization/jest.config.ts"
+      }
+    }
+  },
+  "tags": ["scope:feature", "type:ui"]
+}

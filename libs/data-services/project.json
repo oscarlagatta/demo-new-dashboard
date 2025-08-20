@@ -1,0 +1,31 @@
+{
+  "name": "data-services",
+  "projectType": "library",
+  "sourceRoot": "libs/data-services/src",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/data-services",
+        "main": "libs/data-services/src/index.ts",
+        "tsConfig": "libs/data-services/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["libs/data-services/**/*.{ts,tsx,js,jsx}"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "libs/data-services/jest.config.ts"
+      }
+    }
+  },
+  "tags": ["scope:shared", "type:data"]
+}

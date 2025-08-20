@@ -1,0 +1,54 @@
+{
+  "name": "payment-dashboard",
+  "projectType": "application",
+  "sourceRoot": "apps/payment-dashboard/src",
+  "targets": {
+    "build": {
+      "executor": "@nx/next:build",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/apps/payment-dashboard"
+      },
+      "configurations": {
+        "development": {
+          "outputPath": "apps/payment-dashboard"
+        },
+        "production": {}
+      }
+    },
+    "serve": {
+      "executor": "@nx/next:dev",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "payment-dashboard:build",
+        "dev": true
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "payment-dashboard:build:development",
+          "dev": true
+        },
+        "production": {
+          "buildTarget": "payment-dashboard:build:production",
+          "dev": false
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["apps/payment-dashboard/**/*.{ts,tsx,js,jsx}"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "apps/payment-dashboard/jest.config.ts"
+      }
+    }
+  },
+  "tags": ["scope:app", "type:app"]
+}

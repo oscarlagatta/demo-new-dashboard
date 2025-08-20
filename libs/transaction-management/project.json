@@ -1,0 +1,31 @@
+{
+  "name": "transaction-management",
+  "projectType": "library",
+  "sourceRoot": "libs/transaction-management/src",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/transaction-management",
+        "main": "libs/transaction-management/src/index.ts",
+        "tsConfig": "libs/transaction-management/tsconfig.lib.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["libs/transaction-management/**/*.{ts,tsx,js,jsx}"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "libs/transaction-management/jest.config.ts"
+      }
+    }
+  },
+  "tags": ["scope:feature", "type:feature"]
+}

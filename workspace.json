@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "projects": {
+    "payment-dashboard": "apps/payment-dashboard",
+    "shared-ui": "libs/shared-ui",
+    "flow-visualization": "libs/flow-visualization",
+    "data-services": "libs/data-services",
+    "transaction-management": "libs/transaction-management",
+    "shared-types": "libs/shared-types"
+  }
+}
