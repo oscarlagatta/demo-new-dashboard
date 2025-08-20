@@ -4,8 +4,21 @@ import type React from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { ChevronLeft, ChevronRight, Globe, MapPin, Home, BarChart3, Settings, Users, FileText } from "lucide-react"
+import {
+  ChevronLeft,
+  ChevronRight,
+  Globe,
+  MapPin,
+  Home,
+  BarChart3,
+  Settings,
+  Users,
+  FileText,
+  Info,
+  Mail,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Link, useLocation } from "react-router-dom"
 
 export interface FlowOption {
   id: string
@@ -25,43 +38,60 @@ export interface NavigationOption {
 
 interface NavigationSidebarProps {
   selectedFlow?: string
-  selectedPage?: string
   onFlowChange?: (flowId: string) => void
-  onPageChange?: (pageId: string) => void
   isCollapsed?: boolean
   onToggleCollapse?: () => void
 }
 
 const NAVIGATION_OPTIONS: NavigationOption[] = [
   {
-    id: "dashboard",
-    name: "Home Dashboard",
-    description: "Overview and analytics",
+    id: "home",
+    name: "Home",
+    description: "Dashboard overview",
     icon: <Home className="h-4 w-4" />,
+    href: "/",
+  },
+  {
+    id: "about",
+    name: "About",
+    description: "Learn about our platform",
+    icon: <Info className="h-4 w-4" />,
+    href: "/about",
+  },
+  {
+    id: "contact",
+    name: "Contact",
+    description: "Get in touch with us",
+    icon: <Mail className="h-4 w-4" />,
+    href: "/contact",
   },
   {
     id: "analytics",
     name: "Analytics",
     description: "Payment insights and reports",
     icon: <BarChart3 className="h-4 w-4" />,
+    href: "/analytics",
   },
   {
     id: "users",
     name: "User Management",
     description: "Manage system users",
     icon: <Users className="h-4 w-4" />,
+    href: "/users",
   },
   {
     id: "reports",
     name: "Reports",
     description: "Generate and view reports",
     icon: <FileText className="h-4 w-4" />,
+    href: "/reports",
   },
   {
     id: "settings",
     name: "Settings",
     description: "System configuration",
     icon: <Settings className="h-4 w-4" />,
+    href: "/settings",
   },
 ]
 
@@ -84,12 +114,13 @@ const FLOW_OPTIONS: FlowOption[] = [
 
 export function NavigationSidebar({
   selectedFlow,
-  selectedPage = "dashboard",
   onFlowChange,
-  onPageChange,
   isCollapsed = false,
   onToggleCollapse,
-}: NavigationSidebarProps) {
+}: Omit<NavigationSidebarProps, "selectedPage" | "onPageChange">) {
+  const location = useLocation()
+  const currentPath = location.pathname
+
   return (
     <div
       className={cn(
@@ -114,20 +145,20 @@ export function NavigationSidebar({
           )}
           <div className="space-y-1">
             {NAVIGATION_OPTIONS.map((option) => (
-              <Button
-                key={option.id}
-                variant={selectedPage === option.id ? "default" : "ghost"}
-                className={cn("w-full justify-start gap-3 h-auto p-3", isCollapsed && "px-2 justify-center")}
-                onClick={() => onPageChange?.(option.id)}
-              >
-                {option.icon}
-                {!isCollapsed && (
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium text-sm">{option.name}</span>
-                    <span className="text-xs text-muted-foreground">{option.description}</span>
-                  </div>
-                )}
-              </Button>
+              <Link key={option.id} to={option.href || "/"}>
+                <Button
+                  variant={currentPath === option.href ? "default" : "ghost"}
+                  className={cn("w-full justify-start gap-3 h-auto p-3", isCollapsed && "px-2 justify-center")}
+                >
+                  {option.icon}
+                  {!isCollapsed && (
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium text-sm">{option.name}</span>
+                      <span className="text-xs text-muted-foreground">{option.description}</span>
+                    </div>
+                  )}
+                </Button>
+              </Link>
             ))}
           </div>
         </div>

@@ -1,13 +1,16 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
+import { Routes, Route } from "react-router-dom"
 import { FlowDiagram } from "@/components/flow-diagram"
-import { NavigationSidebar, FLOW_OPTIONS, NAVIGATION_OPTIONS } from "@/components/navigation-sidebar"
+import { NavigationSidebar, FLOW_OPTIONS } from "@/components/navigation-sidebar"
 import PaymentSearchBox from "@/components/payment-search-box"
 import { TransactionSearchProvider } from "@/components/transaction-search-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart3, TrendingUp, Users, DollarSign } from "lucide-react"
+import { BarChart3, TrendingUp, Users, DollarSign, Info, Mail, FileText, Settings } from "lucide-react"
 
 function DashboardContent() {
   return (
@@ -80,47 +83,111 @@ function DashboardContent() {
   )
 }
 
-function PageContent({ pageId }: { pageId: string }) {
-  const page = NAVIGATION_OPTIONS.find((p) => p.id === pageId)
+function AboutPage() {
+  return (
+    <div className="p-6 max-w-4xl mx-auto">
+      <div className="text-center mb-8">
+        <div className="mx-auto w-16 h-16 flex items-center justify-center bg-blue-100 rounded-lg mb-4">
+          <Info className="h-8 w-8 text-blue-600" />
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">About Our Platform</h1>
+        <p className="text-lg text-gray-600">
+          Streamlining payment processing with advanced visualization and analytics
+        </p>
+      </div>
 
+      <div className="grid md:grid-cols-2 gap-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Our Mission</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">
+              We provide comprehensive payment flow visualization and management tools that help financial institutions
+              monitor, analyze, and optimize their payment processing systems in real-time.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Key Features</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-gray-600">
+              <li>• Real-time payment flow visualization</li>
+              <li>• Advanced analytics and reporting</li>
+              <li>• Multi-region support (US, Korea, and more)</li>
+              <li>• Comprehensive transaction search</li>
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+function ContactPage() {
+  return (
+    <div className="p-6 max-w-2xl mx-auto">
+      <div className="text-center mb-8">
+        <div className="mx-auto w-16 h-16 flex items-center justify-center bg-green-100 rounded-lg mb-4">
+          <Mail className="h-8 w-8 text-green-600" />
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">Contact Us</h1>
+        <p className="text-lg text-gray-600">Get in touch with our team for support or inquiries</p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Get in Touch</CardTitle>
+          <CardDescription>We're here to help with any questions or support needs</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <h3 className="font-medium text-gray-900 mb-2">Email Support</h3>
+            <p className="text-gray-600">support@paymentdashboard.com</p>
+          </div>
+          <div>
+            <h3 className="font-medium text-gray-900 mb-2">Phone Support</h3>
+            <p className="text-gray-600">+1 (555) 123-4567</p>
+          </div>
+          <div>
+            <h3 className="font-medium text-gray-900 mb-2">Business Hours</h3>
+            <p className="text-gray-600">Monday - Friday: 9:00 AM - 6:00 PM EST</p>
+          </div>
+          <Button className="w-full">Send Message</Button>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function GenericPage({ title, icon, description }: { title: string; icon: React.ReactNode; description: string }) {
   return (
     <div className="p-6 flex items-center justify-center h-full">
       <div className="text-center">
-        <div className="mb-4">
-          {page?.icon && (
-            <div className="mx-auto w-12 h-12 flex items-center justify-center bg-gray-100 rounded-lg">{page.icon}</div>
-          )}
-        </div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">{page?.name}</h2>
-        <p className="text-gray-600">{page?.description}</p>
+        <div className="mx-auto w-12 h-12 flex items-center justify-center bg-gray-100 rounded-lg mb-4">{icon}</div>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">{title}</h2>
+        <p className="text-gray-600">{description}</p>
         <p className="text-sm text-gray-500 mt-4">This page is under development</p>
       </div>
     </div>
   )
 }
 
-export default function HomePage() {
+export default function App() {
   const [selectedFlow, setSelectedFlow] = useState<string>()
-  const [selectedPage, setSelectedPage] = useState("dashboard")
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   const selectedFlowOption = FLOW_OPTIONS.find((option) => option.id === selectedFlow)
   const flowDataFile = selectedFlowOption?.jsonFile
 
-  const handlePageChange = (pageId: string) => {
-    setSelectedPage(pageId)
-    setSelectedFlow(undefined) // Clear flow selection when navigating to a page
-  }
-
   const handleFlowChange = (flowId: string) => {
     setSelectedFlow(flowId)
-    setSelectedPage("") // Clear page selection when viewing a flow
   }
 
   const isShowingFlow = selectedFlow && flowDataFile
-  const currentPageTitle = isShowingFlow
-    ? `${selectedFlowOption?.name} Flow`
-    : NAVIGATION_OPTIONS.find((p) => p.id === selectedPage)?.name || "Dashboard"
 
   return (
     <TransactionSearchProvider>
@@ -130,9 +197,6 @@ export default function HomePage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <h1 className="text-xl font-semibold text-gray-900">Payment Dashboard</h1>
-              <div className="text-sm text-gray-600">
-                Current: <span className="font-medium">{currentPageTitle}</span>
-              </div>
             </div>
           </div>
         </div>
@@ -147,29 +211,65 @@ export default function HomePage() {
         <div className="flex-grow flex">
           <NavigationSidebar
             selectedFlow={selectedFlow}
-            selectedPage={selectedPage}
             onFlowChange={handleFlowChange}
-            onPageChange={handlePageChange}
             isCollapsed={isSidebarCollapsed}
             onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           />
 
           {/* Main content section */}
-          <main className="flex-grow">
+          <main className="flex-grow bg-white">
             {isShowingFlow ? (
               <div className="p-4 sm:p-6 lg:p-8 pt-4 h-full">
                 <div className="bg-white rounded-lg border shadow-sm h-full w-full">
                   <FlowDiagram flowDataFile={flowDataFile} />
                 </div>
               </div>
-            ) : selectedPage === "dashboard" ? (
-              <div className="bg-white h-full overflow-auto">
-                <DashboardContent />
-              </div>
             ) : (
-              <div className="bg-white h-full">
-                <PageContent pageId={selectedPage} />
-              </div>
+              <Routes>
+                <Route path="/" element={<DashboardContent />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/contact" element={<ContactPage />} />
+                <Route
+                  path="/analytics"
+                  element={
+                    <GenericPage
+                      title="Analytics"
+                      icon={<BarChart3 className="h-6 w-6" />}
+                      description="Payment insights and reports"
+                    />
+                  }
+                />
+                <Route
+                  path="/users"
+                  element={
+                    <GenericPage
+                      title="User Management"
+                      icon={<Users className="h-6 w-6" />}
+                      description="Manage system users"
+                    />
+                  }
+                />
+                <Route
+                  path="/reports"
+                  element={
+                    <GenericPage
+                      title="Reports"
+                      icon={<FileText className="h-6 w-6" />}
+                      description="Generate and view reports"
+                    />
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <GenericPage
+                      title="Settings"
+                      icon={<Settings className="h-6 w-6" />}
+                      description="System configuration"
+                    />
+                  }
+                />
+              </Routes>
             )}
           </main>
         </div>
